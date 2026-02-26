@@ -28,8 +28,8 @@
   ],
   "scripts": {
     "build": "tsc && node scripts/build.js",
-    "inspector": "npx @modelcontextprotocol/inspector build/index.js",
-    "prepare": "npm run build",
+    "inspector": "pnpm dlx @modelcontextprotocol/inspector build/index.js",
+    "prepare": "pnpm run build",
     "watch": "tsc --watch"
   },
   "dependencies": {

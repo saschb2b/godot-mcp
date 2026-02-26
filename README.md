@@ -84,7 +84,7 @@ This direct feedback loop helps AI assistants like Claude understand what works 
 ## Requirements
 
 - [Godot Engine](https://godotengine.org/download) installed on your system
-- Node.js and npm
+- Node.js and pnpm
 - An AI assistant that supports MCP (Cline, Cursor, etc.)
 
 ## Installation and Configuration
@@ -96,8 +96,8 @@ First, clone the repository and build the MCP server:
 ```bash
 git clone https://github.com/Coding-Solo/godot-mcp.git
 cd godot-mcp
-npm install
-npm run build
+pnpm install
+pnpm run build
 ```
 
 ### Step 2: Configure with Your AI Assistant
@@ -232,7 +232,7 @@ The bundled script accepts operation type and parameters as JSON, allowing for f
 - **Godot Not Found**: Set the GODOT_PATH environment variable to your Godot executable
 - **Connection Issues**: Ensure the server is running and restart your AI assistant
 - **Invalid Project Path**: Ensure the path points to a directory containing a project.godot file
-- **Build Issues**: Make sure all dependencies are installed by running `npm install`
+- **Build Issues**: Make sure all dependencies are installed by running `pnpm install`
 - **For Cursor Specifically**:
 -   Ensure the MCP server shows up and is enabled in Cursor settings (Settings > MCP)
 -   MCP tools can only be run using the Agent chat profile (Cursor Pro or Business subscription)

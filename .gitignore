@@ -5,6 +5,10 @@ node_modules/
 build/
 dist/
 
+# Lockfiles (pnpm-lock.yaml is the canonical lockfile)
+package-lock.json
+yarn.lock
+
 # Logs
 *.log
 npm-debug.log*
