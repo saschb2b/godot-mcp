@@ -69,6 +69,28 @@ func _init():
             save_scene(params)
         "set_cells":
             set_cells(params)
+        "get_scene_tree":
+            get_scene_tree(params)
+        "set_node_properties":
+            set_node_properties(params)
+        "attach_script":
+            attach_script(params)
+        "create_resource":
+            create_resource(params)
+        "edit_project_settings":
+            edit_project_settings(params)
+        "remove_node":
+            remove_node(params)
+        "reparent_node":
+            reparent_node(params)
+        "connect_signal":
+            connect_signal_op(params)
+        "get_tile_data":
+            get_tile_data(params)
+        "create_tileset":
+            create_tileset(params)
+        "validate_scene":
+            validate_scene(params)
         "get_uid":
             get_uid(params)
         "resave_resources":
@@ -777,6 +799,473 @@ func set_cells(params):
             printerr("Failed to save scene: " + str(save_error))
     else:
         printerr("Failed to pack scene: " + str(result))
+
+# Helper: load scene, return [scene_root, full_scene_path, absolute_scene_path]
+func _load_scene(params) -> Array:
+    var full_scene_path = params.scene_path
+    if not full_scene_path.begins_with("res://"):
+        full_scene_path = "res://" + full_scene_path
+    var absolute_scene_path = ProjectSettings.globalize_path(full_scene_path)
+
+    if not FileAccess.file_exists(absolute_scene_path):
+        printerr("Scene file does not exist at: " + absolute_scene_path)
+        quit(1)
+
+    var scene = load(full_scene_path)
+    if not scene:
+        printerr("Failed to load scene: " + full_scene_path)
+        quit(1)
+
+    var scene_root = scene.instantiate()
+    return [scene_root, full_scene_path, absolute_scene_path]
+
+# Helper: find a node by path (handles "root/" prefix)
+func _find_node(scene_root, node_path_str: String):
+    var path = node_path_str
+    if path.begins_with("root/"):
+        path = path.substr(5)
+    if path == "" or path == "root":
+        return scene_root
+    var node = scene_root.get_node(path)
+    if not node:
+        printerr("Node not found: " + node_path_str)
+        quit(1)
+    return node
+
+# Helper: pack and save scene
+func _save_scene(scene_root, absolute_scene_path: String) -> void:
+    var packed_scene = PackedScene.new()
+    var result = packed_scene.pack(scene_root)
+    if result != OK:
+        printerr("Failed to pack scene: " + str(result))
+        quit(1)
+    var save_error = ResourceSaver.save(packed_scene, absolute_scene_path)
+    if save_error != OK:
+        printerr("Failed to save scene: " + str(save_error))
+        quit(1)
+
+# Read a scene's node tree as JSON
+func get_scene_tree(params):
+    var result = _load_scene(params)
+    var scene_root = result[0]
+
+    var tree_data = _serialize_node(scene_root, scene_root)
+    var json_str = JSON.stringify(tree_data, "  ")
+    print(json_str)
+
+func _serialize_node(node, scene_root) -> Dictionary:
+    var data = {
+        "name": node.name,
+        "type": node.get_class(),
+    }
+
+    # Include script path if attached
+    var script = node.get_script()
+    if script and script.resource_path != "":
+        data["script"] = script.resource_path
+
+    # Include key properties based on node type
+    var props = {}
+    if node is Node2D:
+        if node.position != Vector2.ZERO:
+            props["position"] = [node.position.x, node.position.y]
+        if node.scale != Vector2.ONE:
+            props["scale"] = [node.scale.x, node.scale.y]
+        if node.rotation != 0.0:
+            props["rotation"] = node.rotation
+    if node is CanvasItem:
+        if not node.visible:
+            props["visible"] = false
+        if node.z_index != 0:
+            props["z_index"] = node.z_index
+
+    if props.size() > 0:
+        data["properties"] = props
+
+    # Recurse into children
+    var children = []
+    for child in node.get_children():
+        children.append(_serialize_node(child, scene_root))
+    if children.size() > 0:
+        data["children"] = children
+
+    return data
+
+# Set properties on an existing node
+func set_node_properties(params):
+    var result = _load_scene(params)
+    var scene_root = result[0]
+    var absolute_scene_path = result[2]
+
+    var node = _find_node(scene_root, params.node_path)
+
+    var properties = params.properties
+    for property in properties:
+        var value = properties[property]
+        # Handle array-to-vector conversion
+        if value is Array and value.size() == 2:
+            var prop_hint = _get_property_type(node, property)
+            if prop_hint == "Vector2" or prop_hint == "Vector2i":
+                if prop_hint == "Vector2i":
+                    value = Vector2i(int(value[0]), int(value[1]))
+                else:
+                    value = Vector2(value[0], value[1])
+        elif value is Array and value.size() == 3:
+            var prop_hint = _get_property_type(node, property)
+            if prop_hint == "Vector3" or prop_hint == "Vector3i":
+                if prop_hint == "Vector3i":
+                    value = Vector3i(int(value[0]), int(value[1]), int(value[2]))
+                else:
+                    value = Vector3(value[0], value[1], value[2])
+        node.set(property, value)
+        log_debug("Set " + property + " = " + str(value))
+
+    _save_scene(scene_root, absolute_scene_path)
+    print("Properties set successfully on node: " + params.node_path)
+
+func _get_property_type(node, property_name: String) -> String:
+    for prop in node.get_property_list():
+        if prop.name == property_name:
+            match prop.type:
+                TYPE_VECTOR2:
+                    return "Vector2"
+                TYPE_VECTOR2I:
+                    return "Vector2i"
+                TYPE_VECTOR3:
+                    return "Vector3"
+                TYPE_VECTOR3I:
+                    return "Vector3i"
+    return ""
+
+# Attach a script to a node
+func attach_script(params):
+    var result = _load_scene(params)
+    var scene_root = result[0]
+    var absolute_scene_path = result[2]
+
+    var node = _find_node(scene_root, params.node_path)
+
+    var full_script_path = params.script_path
+    if not full_script_path.begins_with("res://"):
+        full_script_path = "res://" + full_script_path
+
+    var script = load(full_script_path)
+    if not script:
+        printerr("Failed to load script: " + full_script_path)
+        quit(1)
+
+    node.set_script(script)
+
+    _save_scene(scene_root, absolute_scene_path)
+    print("Script '" + params.script_path + "' attached to node: " + params.node_path)
+
+# Create a .tres resource file
+func create_resource(params):
+    var full_resource_path = params.resource_path
+    if not full_resource_path.begins_with("res://"):
+        full_resource_path = "res://" + full_resource_path
+
+    var resource = null
+
+    # If a script path is provided, load it and create an instance
+    if params.has("script_path") and params.script_path != "":
+        var full_script_path = params.script_path
+        if not full_script_path.begins_with("res://"):
+            full_script_path = "res://" + full_script_path
+        var script = load(full_script_path)
+        if not script:
+            printerr("Failed to load script: " + full_script_path)
+            quit(1)
+        resource = Resource.new()
+        resource.set_script(script)
+    else:
+        # Try to create by class name
+        var resource_type = params.resource_type
+        if ClassDB.class_exists(resource_type) and ClassDB.can_instantiate(resource_type):
+            resource = ClassDB.instantiate(resource_type)
+        else:
+            resource = Resource.new()
+
+    if not resource:
+        printerr("Failed to create resource of type: " + params.resource_type)
+        quit(1)
+
+    # Set properties
+    if params.has("properties"):
+        var properties = params.properties
+        for property in properties:
+            resource.set(property, properties[property])
+
+    # Ensure directory exists
+    var dir_path = full_resource_path.get_base_dir()
+    if not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(dir_path)):
+        DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(dir_path))
+
+    var save_error = ResourceSaver.save(resource, full_resource_path)
+    if save_error != OK:
+        printerr("Failed to save resource: " + str(save_error))
+        quit(1)
+
+    print("Resource created at: " + params.resource_path)
+
+# Edit project.godot settings
+func edit_project_settings(params):
+    var settings = params.settings
+    for key in settings:
+        var value = settings[key]
+        ProjectSettings.set_setting(key, value)
+        log_debug("Set setting: " + key + " = " + str(value))
+
+    var save_error = ProjectSettings.save()
+    if save_error != OK:
+        printerr("Failed to save project settings: " + str(save_error))
+        quit(1)
+
+    print("Project settings updated successfully")
+
+# Remove a node from a scene
+func remove_node(params):
+    var result = _load_scene(params)
+    var scene_root = result[0]
+    var absolute_scene_path = result[2]
+
+    var node_path = params.node_path
+    if node_path == "root" or node_path == "":
+        printerr("Cannot remove the root node")
+        quit(1)
+
+    var node = _find_node(scene_root, node_path)
+    var node_name = node.name
+    node.get_parent().remove_child(node)
+    node.queue_free()
+
+    _save_scene(scene_root, absolute_scene_path)
+    print("Node '" + node_name + "' removed successfully")
+
+# Move a node to a different parent
+func reparent_node(params):
+    var result = _load_scene(params)
+    var scene_root = result[0]
+    var absolute_scene_path = result[2]
+
+    var node = _find_node(scene_root, params.node_path)
+    var new_parent = _find_node(scene_root, params.new_parent_path)
+
+    var node_name = node.name
+    node.get_parent().remove_child(node)
+    new_parent.add_child(node)
+    node.owner = scene_root
+
+    # Re-set owner for all descendants so they persist in the scene
+    _set_owner_recursive(node, scene_root)
+
+    _save_scene(scene_root, absolute_scene_path)
+    print("Node '" + node_name + "' reparented to '" + new_parent.name + "'")
+
+func _set_owner_recursive(node, owner):
+    for child in node.get_children():
+        child.owner = owner
+        _set_owner_recursive(child, owner)
+
+# Connect a signal between nodes
+func connect_signal_op(params):
+    var result = _load_scene(params)
+    var scene_root = result[0]
+    var absolute_scene_path = result[2]
+
+    var source = _find_node(scene_root, params.source_node_path)
+    var target = _find_node(scene_root, params.target_node_path)
+
+    var signal_name = params.signal_name
+    var method_name = params.method_name
+
+    if not source.has_signal(signal_name):
+        printerr("Signal '" + signal_name + "' not found on node: " + params.source_node_path)
+        quit(1)
+
+    source.connect(signal_name, Callable(target, method_name))
+
+    _save_scene(scene_root, absolute_scene_path)
+    print("Signal '" + signal_name + "' connected from '" + source.name + "' to '" + target.name + "." + method_name + "'")
+
+# Read tile data from a TileMapLayer
+func get_tile_data(params):
+    var result = _load_scene(params)
+    var scene_root = result[0]
+
+    var node = _find_node(scene_root, params.node_path)
+
+    if not node is TileMapLayer:
+        printerr("Node is not a TileMapLayer: " + node.get_class())
+        quit(1)
+
+    var used_cells = node.get_used_cells()
+    var cells = []
+    for coords in used_cells:
+        var source_id = node.get_cell_source_id(coords)
+        var atlas_coords = node.get_cell_atlas_coords(coords)
+        cells.append({
+            "x": coords.x,
+            "y": coords.y,
+            "source_id": source_id,
+            "atlas_x": atlas_coords.x,
+            "atlas_y": atlas_coords.y
+        })
+
+    var output = {"cell_count": cells.size(), "cells": cells}
+    print(JSON.stringify(output, "  "))
+
+# Create a TileSet resource with atlas sources
+func create_tileset(params):
+    var full_resource_path = params.resource_path
+    if not full_resource_path.begins_with("res://"):
+        full_resource_path = "res://" + full_resource_path
+
+    var tileset = TileSet.new()
+
+    # Set tile size
+    if params.has("tile_size"):
+        var ts = params.tile_size
+        tileset.tile_size = Vector2i(int(ts.x), int(ts.y))
+    else:
+        tileset.tile_size = Vector2i(16, 16)
+
+    # Add custom data layers
+    if params.has("custom_data_layers"):
+        var layers = params.custom_data_layers
+        for i in range(layers.size()):
+            var layer = layers[i]
+            tileset.add_custom_data_layer()
+            tileset.set_custom_data_layer_name(i, layer.name)
+            match layer.type:
+                "bool":
+                    tileset.set_custom_data_layer_type(i, TYPE_BOOL)
+                "int":
+                    tileset.set_custom_data_layer_type(i, TYPE_INT)
+                "float":
+                    tileset.set_custom_data_layer_type(i, TYPE_FLOAT)
+                "string":
+                    tileset.set_custom_data_layer_type(i, TYPE_STRING)
+                _:
+                    tileset.set_custom_data_layer_type(i, TYPE_BOOL)
+            log_debug("Added custom data layer: " + layer.name + " (" + layer.type + ")")
+
+    # Add atlas sources
+    var atlas_sources = params.atlas_sources
+    for source_def in atlas_sources:
+        var full_texture_path = source_def.texture_path
+        if not full_texture_path.begins_with("res://"):
+            full_texture_path = "res://" + full_texture_path
+
+        var texture = load(full_texture_path)
+        if not texture:
+            printerr("Failed to load texture: " + full_texture_path)
+            quit(1)
+
+        var atlas_source = TileSetAtlasSource.new()
+        atlas_source.texture = texture
+        atlas_source.texture_region_size = tileset.tile_size
+
+        # Auto-create tiles for the entire texture
+        var tex_size = texture.get_size()
+        var cols = int(tex_size.x) / tileset.tile_size.x
+        var rows = int(tex_size.y) / tileset.tile_size.y
+        for row in range(rows):
+            for col in range(cols):
+                var atlas_coords = Vector2i(col, row)
+                atlas_source.create_tile(atlas_coords)
+
+        tileset.add_source(atlas_source)
+        log_debug("Added atlas source: " + full_texture_path + " (" + str(cols) + "x" + str(rows) + " tiles)")
+
+    # Ensure directory exists
+    var dir_path = full_resource_path.get_base_dir()
+    var abs_dir = ProjectSettings.globalize_path(dir_path)
+    if not DirAccess.dir_exists_absolute(abs_dir):
+        DirAccess.make_dir_recursive_absolute(abs_dir)
+
+    var save_error = ResourceSaver.save(tileset, full_resource_path)
+    if save_error != OK:
+        printerr("Failed to save TileSet: " + str(save_error))
+        quit(1)
+
+    print("TileSet created at: " + params.resource_path)
+
+# Validate a scene for common issues
+func validate_scene(params):
+    var result = _load_scene(params)
+    var scene_root = result[0]
+
+    var issues = []
+    _validate_node_recursive(scene_root, scene_root, issues)
+
+    var output = {
+        "scene": params.scene_path,
+        "issue_count": issues.size(),
+        "issues": issues,
+        "status": "valid" if issues.size() == 0 else "issues_found"
+    }
+    print(JSON.stringify(output, "  "))
+
+func _validate_node_recursive(node, scene_root, issues: Array):
+    var node_path = str(scene_root.get_path_to(node))
+    if node_path == ".":
+        node_path = node.name
+
+    # Check for script references that can't be loaded
+    var script = node.get_script()
+    if script:
+        if script.resource_path != "" and not FileAccess.file_exists(script.resource_path):
+            issues.append({
+                "node": node_path,
+                "type": "missing_script",
+                "message": "Script not found: " + script.resource_path
+            })
+
+    # Check for nodes with no name (shouldn't happen, but defensive)
+    if node.name == "":
+        issues.append({
+            "node": node_path,
+            "type": "unnamed_node",
+            "message": "Node has no name"
+        })
+
+    # Check Sprite2D/Sprite3D with no texture
+    if node is Sprite2D and node.texture == null:
+        issues.append({
+            "node": node_path,
+            "type": "missing_texture",
+            "message": "Sprite2D has no texture assigned"
+        })
+
+    # Check TileMapLayer with no TileSet
+    if node is TileMapLayer and node.tile_set == null:
+        issues.append({
+            "node": node_path,
+            "type": "missing_tileset",
+            "message": "TileMapLayer has no TileSet assigned"
+        })
+
+    # Check CollisionShape2D/3D with no shape
+    if node is CollisionShape2D and node.shape == null:
+        issues.append({
+            "node": node_path,
+            "type": "missing_shape",
+            "message": "CollisionShape2D has no shape assigned"
+        })
+
+    # Check for nodes outside the visible area (extreme positions)
+    if node is Node2D:
+        if abs(node.position.x) > 10000 or abs(node.position.y) > 10000:
+            issues.append({
+                "node": node_path,
+                "type": "extreme_position",
+                "message": "Node2D at extreme position: " + str(node.position)
+            })
+
+    # Recurse
+    for child in node.get_children():
+        _validate_node_recursive(child, scene_root, issues)
 
 # Export a scene as a MeshLibrary resource
 func export_mesh_library(params):

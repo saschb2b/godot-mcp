@@ -73,10 +73,25 @@ This direct feedback loop helps AI assistants like Claude understand what works 
 - **Scene Management**:
   - Create new scenes with specified root node types
   - Add nodes to existing scenes with customizable properties
+  - Remove nodes from scenes
+  - Reparent nodes within scenes
+  - Set properties on existing nodes
+  - Attach scripts to nodes
+  - Connect signals between nodes
+  - Read scene tree structure as JSON
   - Load sprites and textures into Sprite2D nodes
   - Set tile cells on TileMapLayer nodes
+  - Read tile data from TileMapLayer nodes
   - Export 3D scenes as MeshLibrary resources for GridMap
   - Save scenes with options for creating variants
+- **Resource Management**:
+  - Create .tres resource files with typed properties
+  - Create TileSet resources with atlas sources and custom data layers
+- **Project Configuration**:
+  - Edit project.godot settings (autoloads, input actions, display, etc.)
+- **Validation & Export**:
+  - Validate scenes for common issues (missing scripts, textures, shapes)
+  - Export projects for target platforms using configured presets
 - **UID Management** (for Godot 4.4+):
   - Get UID for specific files
   - Update UID references by resaving resources
@@ -94,7 +109,7 @@ This direct feedback loop helps AI assistants like Claude understand what works 
 First, clone the repository and build the MCP server:
 
 ```bash
-git clone https://github.com/Coding-Solo/godot-mcp.git
+git clone https://github.com/saschb2b/godot-mcp.git
 cd godot-mcp
 pnpm install
 pnpm run build
@@ -128,6 +143,18 @@ Add to your Cline MCP settings file (`~/Library/Application Support/Code/User/gl
         "add_node",
         "load_sprite",
         "set_cells",
+        "get_scene_tree",
+        "set_node_properties",
+        "attach_script",
+        "create_resource",
+        "edit_project_settings",
+        "remove_node",
+        "reparent_node",
+        "connect_signal",
+        "get_tile_data",
+        "create_tileset",
+        "export_project",
+        "validate_scene",
         "export_mesh_library",
         "save_scene",
         "get_uid",
