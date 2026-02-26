@@ -67,6 +67,8 @@ func _init():
             export_mesh_library(params)
         "save_scene":
             save_scene(params)
+        "set_cells":
+            set_cells(params)
         "get_uid":
             get_uid(params)
         "resave_resources":
@@ -690,6 +692,89 @@ func load_sprite(params):
                 print("Sprite loaded successfully with texture: " + full_texture_path)
         else:
             printerr("Failed to save scene: " + str(error))
+    else:
+        printerr("Failed to pack scene: " + str(result))
+
+# Set tile cells on a TileMapLayer node in a scene
+func set_cells(params):
+    print("Setting cells on TileMapLayer in scene: " + params.scene_path)
+
+    var full_scene_path = params.scene_path
+    if not full_scene_path.begins_with("res://"):
+        full_scene_path = "res://" + full_scene_path
+    if debug_mode:
+        print("Scene path (with res://): " + full_scene_path)
+
+    var absolute_scene_path = ProjectSettings.globalize_path(full_scene_path)
+    if debug_mode:
+        print("Absolute scene path: " + absolute_scene_path)
+
+    if not FileAccess.file_exists(absolute_scene_path):
+        printerr("Scene file does not exist at: " + absolute_scene_path)
+        quit(1)
+
+    var scene = load(full_scene_path)
+    if not scene:
+        printerr("Failed to load scene: " + full_scene_path)
+        quit(1)
+
+    if debug_mode:
+        print("Scene loaded successfully")
+    var scene_root = scene.instantiate()
+    if debug_mode:
+        print("Scene instantiated")
+
+    # Find the TileMapLayer node
+    var node_path = params.node_path
+    if node_path.begins_with("root/"):
+        node_path = node_path.substr(5)
+
+    var layer = null
+    if node_path == "" or node_path == "root":
+        layer = scene_root
+    else:
+        layer = scene_root.get_node(node_path)
+
+    if not layer:
+        printerr("Node not found: " + params.node_path)
+        quit(1)
+
+    if not layer is TileMapLayer:
+        printerr("Node is not a TileMapLayer: " + layer.get_class())
+        quit(1)
+
+    if debug_mode:
+        print("Found TileMapLayer: " + layer.name)
+
+    # Set each cell
+    var cells = params.cells
+    var count = 0
+    for cell in cells:
+        var coords = Vector2i(int(cell.x), int(cell.y))
+        var source_id = int(cell.source_id)
+        var atlas_coords = Vector2i(int(cell.atlas_x), int(cell.atlas_y))
+        layer.set_cell(coords, source_id, atlas_coords)
+        count += 1
+
+    if debug_mode:
+        print("Set " + str(count) + " cells")
+
+    # Save the modified scene
+    var packed_scene = PackedScene.new()
+    var result = packed_scene.pack(scene_root)
+    if debug_mode:
+        print("Pack result: " + str(result) + " (OK=" + str(OK) + ")")
+
+    if result == OK:
+        if debug_mode:
+            print("Saving scene to: " + absolute_scene_path)
+        var save_error = ResourceSaver.save(packed_scene, absolute_scene_path)
+        if debug_mode:
+            print("Save result: " + str(save_error) + " (OK=" + str(OK) + ")")
+        if save_error == OK:
+            print("Set " + str(count) + " cells on TileMapLayer successfully")
+        else:
+            printerr("Failed to save scene: " + str(save_error))
     else:
         printerr("Failed to pack scene: " + str(result))
 

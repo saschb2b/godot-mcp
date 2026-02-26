@@ -882,6 +882,43 @@ class GodotServer {
           },
         },
         {
+          name: 'set_cells',
+          description: 'Set tile cells on a TileMapLayer node in a scene',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              projectPath: {
+                type: 'string',
+                description: 'Path to the Godot project directory',
+              },
+              scenePath: {
+                type: 'string',
+                description: 'Path to the scene file (relative to project)',
+              },
+              nodePath: {
+                type: 'string',
+                description: 'Path to the TileMapLayer node (e.g., "root/TileMapLayer")',
+              },
+              cells: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    x: { type: 'integer', description: 'Cell X coordinate' },
+                    y: { type: 'integer', description: 'Cell Y coordinate' },
+                    sourceId: { type: 'integer', description: 'TileSet source ID' },
+                    atlasX: { type: 'integer', description: 'Atlas X coordinate' },
+                    atlasY: { type: 'integer', description: 'Atlas Y coordinate' },
+                  },
+                  required: ['x', 'y', 'sourceId', 'atlasX', 'atlasY'],
+                },
+                description: 'Array of cells to set on the TileMapLayer',
+              },
+            },
+            required: ['projectPath', 'scenePath', 'nodePath', 'cells'],
+          },
+        },
+        {
           name: 'get_uid',
           description: 'Get the UID for a specific file in a Godot project (for Godot 4.4+)',
           inputSchema: {
@@ -944,6 +981,8 @@ class GodotServer {
           return await this.handleExportMeshLibrary(request.params.arguments);
         case 'save_scene':
           return await this.handleSaveScene(request.params.arguments);
+        case 'set_cells':
+          return await this.handleSetCells(request.params.arguments);
         case 'get_uid':
           return await this.handleGetUid(request.params.arguments);
         case 'update_project_uids':
@@ -2034,6 +2073,93 @@ class GodotServer {
     } catch (error: any) {
       return this.createErrorResponse(
         `Failed to get UID: ${error?.message || 'Unknown error'}`,
+        [
+          'Ensure Godot is installed correctly',
+          'Check if the GODOT_PATH environment variable is set correctly',
+          'Verify the project path is accessible',
+        ]
+      );
+    }
+  }
+
+  /**
+   * Handle the set_cells tool
+   */
+  private async handleSetCells(args: any) {
+    // Normalize parameters to camelCase
+    args = this.normalizeParameters(args);
+
+    if (!args.projectPath || !args.scenePath || !args.nodePath || !args.cells) {
+      return this.createErrorResponse(
+        'Missing required parameters',
+        ['Provide projectPath, scenePath, nodePath, and cells']
+      );
+    }
+
+    if (!this.validatePath(args.projectPath) || !this.validatePath(args.scenePath)) {
+      return this.createErrorResponse(
+        'Invalid path',
+        ['Provide valid paths without ".." or other potentially unsafe characters']
+      );
+    }
+
+    try {
+      // Check if the project directory exists and contains a project.godot file
+      const projectFile = join(args.projectPath, 'project.godot');
+      if (!existsSync(projectFile)) {
+        return this.createErrorResponse(
+          `Not a valid Godot project: ${args.projectPath}`,
+          [
+            'Ensure the path points to a directory containing a project.godot file',
+            'Use list_projects to find valid Godot projects',
+          ]
+        );
+      }
+
+      // Check if the scene file exists
+      const scenePath = join(args.projectPath, args.scenePath);
+      if (!existsSync(scenePath)) {
+        return this.createErrorResponse(
+          `Scene file does not exist: ${args.scenePath}`,
+          [
+            'Ensure the scene path is correct',
+            'Use create_scene to create a new scene first',
+          ]
+        );
+      }
+
+      // Prepare parameters for the operation
+      const params: any = {
+        scenePath: args.scenePath,
+        nodePath: args.nodePath,
+        cells: args.cells,
+      };
+
+      // Execute the operation
+      const { stdout, stderr } = await this.executeOperation('set_cells', params, args.projectPath);
+
+      if (stderr && stderr.includes('Failed to')) {
+        return this.createErrorResponse(
+          `Failed to set cells: ${stderr}`,
+          [
+            'Check if the node path points to a valid TileMapLayer',
+            'Ensure the scene file is valid',
+            'Verify the TileMapLayer has a TileSet assigned',
+          ]
+        );
+      }
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Set ${args.cells.length} cells on TileMapLayer in '${args.scenePath}'.\n\nOutput: ${stdout}`,
+          },
+        ],
+      };
+    } catch (error: any) {
+      return this.createErrorResponse(
+        `Failed to set cells: ${error?.message || 'Unknown error'}`,
         [
           'Ensure Godot is installed correctly',
           'Check if the GODOT_PATH environment variable is set correctly',

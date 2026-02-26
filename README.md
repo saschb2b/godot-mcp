@@ -74,6 +74,7 @@ This direct feedback loop helps AI assistants like Claude understand what works 
   - Create new scenes with specified root node types
   - Add nodes to existing scenes with customizable properties
   - Load sprites and textures into Sprite2D nodes
+  - Set tile cells on TileMapLayer nodes
   - Export 3D scenes as MeshLibrary resources for GridMap
   - Save scenes with options for creating variants
 - **UID Management** (for Godot 4.4+):
@@ -126,6 +127,7 @@ Add to your Cline MCP settings file (`~/Library/Application Support/Code/User/gl
         "create_scene",
         "add_node",
         "load_sprite",
+        "set_cells",
         "export_mesh_library",
         "save_scene",
         "get_uid",
@@ -194,6 +196,8 @@ Once configured, your AI assistant will automatically run the MCP server when ne
 "Create a new scene with a Player node in my Godot project"
 
 "Add a Sprite2D node to my player scene and load the character texture"
+
+"Set tiles on my TileMapLayer to create a dungeon room layout"
 
 "Export my 3D models as a MeshLibrary for use with GridMap"
 
