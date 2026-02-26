@@ -98,7 +98,6 @@ The following tools have been recently added:
   - Analyzes project structure
   - Returns information about scenes, scripts, and assets
   - Helps LLMs understand the organization of Godot projects
-  
 - **capture_screenshot**: Takes a screenshot of a running Godot project
   - Requires an active Godot process
   - Saves the screenshot to the specified path

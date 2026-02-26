@@ -28,6 +28,9 @@
   ],
   "scripts": {
     "build": "tsc && node scripts/build.js",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
     "inspector": "pnpm dlx @modelcontextprotocol/inspector build/index.js",
     "prepare": "pnpm run build",
     "watch": "tsc --watch"
@@ -38,10 +41,17 @@
     "fs-extra": "^11.2.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^20.11.24",
-    "typescript": "^5.3.3"
+    "eslint": "^10.0.2",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.3.0",
+    "prettier": "^3.8.1",
+    "typescript": "^5.3.3",
+    "typescript-eslint": "^8.56.1"
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "packageManager": "pnpm@10.28.2"
 }
