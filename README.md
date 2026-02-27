@@ -74,20 +74,32 @@ This direct feedback loop helps AI assistants like Claude understand what works 
   - Add nodes to existing scenes with customizable properties
   - Remove nodes from scenes
   - Reparent nodes within scenes
+  - Duplicate nodes within scenes
+  - Instantiate scenes as child instances of other scenes
   - Set properties on existing nodes
+  - Read properties from nodes (JSON output)
   - Attach scripts to nodes
+  - Read GDScript file contents
   - Connect signals between nodes
+  - Add/remove nodes to/from groups
   - Read scene tree structure as JSON
   - Load sprites and textures into Sprite2D nodes
   - Set tile cells on TileMapLayer nodes
   - Read tile data from TileMapLayer nodes
+  - Set custom data layer values on tile cells
   - Export 3D scenes as MeshLibrary resources for GridMap
   - Save scenes with options for creating variants
+- **Animation**:
+  - Create AnimationPlayer nodes with pre-configured animations
+  - Add animations with tracks, keyframes, and interpolation settings
+- **Physics**:
+  - Set collision layers and masks (accepts layer numbers or raw bitmask)
 - **Resource Management**:
   - Create .tres resource files with typed properties
   - Create TileSet resources with atlas sources and custom data layers
 - **Project Configuration**:
   - Edit project.godot settings (autoloads, input actions, display, etc.)
+  - Add, remove, or list autoload singletons
 - **Validation & Export**:
   - Validate scenes for common issues (missing scripts, textures, shapes)
   - Export projects for target platforms using configured presets
@@ -157,7 +169,18 @@ Add to your Cline MCP settings file (`~/Library/Application Support/Code/User/gl
         "export_mesh_library",
         "save_scene",
         "get_uid",
-        "update_project_uids"
+        "update_project_uids",
+        "add_to_group",
+        "remove_from_group",
+        "instantiate_scene",
+        "add_animation",
+        "read_script",
+        "set_custom_tile_data",
+        "duplicate_node",
+        "get_node_properties",
+        "create_animation_player",
+        "manage_autoloads",
+        "set_collision_layer_mask"
       ]
     }
   }

@@ -95,6 +95,28 @@ func _init():
             get_uid(params)
         "resave_resources":
             resave_resources(params)
+        "add_to_group":
+            add_to_group(params)
+        "remove_from_group":
+            remove_from_group(params)
+        "instantiate_scene":
+            instantiate_scene(params)
+        "add_animation":
+            add_animation(params)
+        "read_script":
+            read_script(params)
+        "set_custom_tile_data":
+            set_custom_tile_data(params)
+        "duplicate_node":
+            duplicate_node_op(params)
+        "get_node_properties":
+            get_node_properties(params)
+        "create_animation_player":
+            create_animation_player(params)
+        "manage_autoloads":
+            manage_autoloads(params)
+        "set_collision_layer_mask":
+            set_collision_layer_mask(params)
         _:
             log_error("Unknown operation: " + operation)
             quit(1)
@@ -1764,3 +1786,415 @@ func save_scene(params):
             printerr("Failed to save scene: " + str(error))
     else:
         printerr("Failed to pack scene: " + str(result))
+
+# ============================================================
+# Group management
+# ============================================================
+
+func add_to_group(params):
+    var result = _load_scene(params)
+    var scene_root = result[0]
+    var absolute_scene_path = result[2]
+
+    var node = _find_node(scene_root, params.node_path)
+    var groups: Array = params.groups if params.has("groups") else [params.group]
+
+    for group_name in groups:
+        if not node.is_in_group(group_name):
+            node.add_to_group(group_name, true)
+
+    _save_scene(scene_root, absolute_scene_path)
+    print("Added node '" + params.node_path + "' to groups: " + str(groups))
+
+func remove_from_group(params):
+    var result = _load_scene(params)
+    var scene_root = result[0]
+    var absolute_scene_path = result[2]
+
+    var node = _find_node(scene_root, params.node_path)
+    var groups: Array = params.groups if params.has("groups") else [params.group]
+
+    for group_name in groups:
+        if node.is_in_group(group_name):
+            node.remove_from_group(group_name)
+
+    _save_scene(scene_root, absolute_scene_path)
+    print("Removed node '" + params.node_path + "' from groups: " + str(groups))
+
+# ============================================================
+# Scene instantiation
+# ============================================================
+
+func instantiate_scene(params):
+    var result = _load_scene(params)
+    var scene_root = result[0]
+    var absolute_scene_path = result[2]
+
+    var child_scene_path = params.child_scene_path
+    if not child_scene_path.begins_with("res://"):
+        child_scene_path = "res://" + child_scene_path
+
+    var child_scene = load(child_scene_path)
+    if not child_scene:
+        printerr("Failed to load child scene: " + child_scene_path)
+        quit(1)
+
+    var instance = child_scene.instantiate()
+
+    if params.has("node_name") and params.node_name != "":
+        instance.name = params.node_name
+
+    var parent = scene_root
+    if params.has("parent_node_path") and params.parent_node_path != "":
+        parent = _find_node(scene_root, params.parent_node_path)
+
+    parent.add_child(instance)
+    instance.owner = scene_root
+    _set_owner_recursive(instance, scene_root)
+
+    if params.has("position") and instance is Node2D:
+        instance.position = Vector2(params.position.x, params.position.y)
+    elif params.has("position") and instance is Node3D:
+        instance.position = Vector3(params.position.x, params.position.y, params.position.get("z", 0))
+
+    _save_scene(scene_root, absolute_scene_path)
+    print("Scene '" + child_scene_path + "' instantiated as '" + instance.name + "'")
+
+# ============================================================
+# Animation
+# ============================================================
+
+func add_animation(params):
+    var result = _load_scene(params)
+    var scene_root = result[0]
+    var absolute_scene_path = result[2]
+
+    var node = _find_node(scene_root, params.node_path)
+    if not node is AnimationPlayer:
+        printerr("Node is not an AnimationPlayer: " + params.node_path)
+        quit(1)
+
+    var anim_player: AnimationPlayer = node
+    var anim_name: String = params.animation_name
+    var anim_length: float = params.get("length", 1.0)
+    var anim_loop: bool = params.get("loop", false)
+
+    var animation = Animation.new()
+    animation.length = anim_length
+    if anim_loop:
+        animation.loop_mode = Animation.LOOP_LINEAR
+
+    if params.has("tracks"):
+        for track_data in params.tracks:
+            var track_type = Animation.TYPE_VALUE
+            var type_str = track_data.get("type", "value")
+            match type_str:
+                "value":
+                    track_type = Animation.TYPE_VALUE
+                "method":
+                    track_type = Animation.TYPE_METHOD
+                "bezier":
+                    track_type = Animation.TYPE_BEZIER
+
+            var track_idx = animation.add_track(track_type)
+            animation.track_set_path(track_idx, NodePath(track_data.path))
+
+            if track_data.has("interpolation"):
+                match track_data.interpolation:
+                    "nearest":
+                        animation.track_set_interpolation_type(track_idx, Animation.INTERPOLATION_NEAREST)
+                    "linear":
+                        animation.track_set_interpolation_type(track_idx, Animation.INTERPOLATION_LINEAR)
+                    "cubic":
+                        animation.track_set_interpolation_type(track_idx, Animation.INTERPOLATION_CUBIC)
+
+            if track_data.has("keyframes"):
+                for kf in track_data.keyframes:
+                    var time: float = kf.time
+                    var value = kf.value
+                    if value is Dictionary:
+                        if value.has("x") and value.has("y"):
+                            if value.has("z"):
+                                value = Vector3(value.x, value.y, value.z)
+                            else:
+                                value = Vector2(value.x, value.y)
+                        elif value.has("r") and value.has("g"):
+                            value = Color(value.r, value.g, value.b, value.get("a", 1.0))
+                    animation.track_insert_key(track_idx, time, value)
+
+    var lib = anim_player.get_animation_library("")
+    if not lib:
+        lib = AnimationLibrary.new()
+        anim_player.add_animation_library("", lib)
+    lib.add_animation(anim_name, animation)
+
+    _save_scene(scene_root, absolute_scene_path)
+    print("Animation '" + anim_name + "' added with " + str(animation.get_track_count()) + " tracks")
+
+# ============================================================
+# Script reading
+# ============================================================
+
+func read_script(params):
+    var script_path = params.script_path
+    if not script_path.begins_with("res://"):
+        script_path = "res://" + script_path
+
+    var absolute_path = ProjectSettings.globalize_path(script_path)
+    if not FileAccess.file_exists(absolute_path):
+        printerr("Script file does not exist: " + script_path)
+        quit(1)
+
+    var file = FileAccess.open(absolute_path, FileAccess.READ)
+    if not file:
+        printerr("Failed to open script: " + script_path)
+        quit(1)
+
+    var content = file.get_as_text()
+    file.close()
+    print(content)
+
+# ============================================================
+# Custom tile data
+# ============================================================
+
+func set_custom_tile_data(params):
+    var result = _load_scene(params)
+    var scene_root = result[0]
+    var absolute_scene_path = result[2]
+
+    var node = _find_node(scene_root, params.node_path)
+    if not node is TileMapLayer:
+        printerr("Node is not a TileMapLayer: " + params.node_path)
+        quit(1)
+
+    var layer: TileMapLayer = node
+    var tile_set = layer.tile_set
+    if not tile_set:
+        printerr("TileMapLayer has no TileSet assigned")
+        quit(1)
+
+    var cells_updated := 0
+    for cell_data in params.cells:
+        var coords = Vector2i(cell_data.x, cell_data.y)
+        var tile_data = layer.get_cell_tile_data(coords)
+        if not tile_data:
+            log_debug("No tile at " + str(coords) + ", skipping")
+            continue
+
+        for key in cell_data.custom_data:
+            tile_data.set_custom_data(key, cell_data.custom_data[key])
+        cells_updated += 1
+
+    _save_scene(scene_root, absolute_scene_path)
+    print("Updated custom data on " + str(cells_updated) + " cells")
+
+# ============================================================
+# Node duplication
+# ============================================================
+
+func duplicate_node_op(params):
+    var result = _load_scene(params)
+    var scene_root = result[0]
+    var absolute_scene_path = result[2]
+
+    var source_node = _find_node(scene_root, params.node_path)
+    var duplicate = source_node.duplicate()
+
+    if params.has("new_name") and params.new_name != "":
+        duplicate.name = params.new_name
+
+    var parent = source_node.get_parent()
+    if params.has("parent_node_path") and params.parent_node_path != "":
+        parent = _find_node(scene_root, params.parent_node_path)
+
+    parent.add_child(duplicate)
+    duplicate.owner = scene_root
+    _set_owner_recursive(duplicate, scene_root)
+
+    _save_scene(scene_root, absolute_scene_path)
+    print("Node '" + params.node_path + "' duplicated as '" + duplicate.name + "'")
+
+# ============================================================
+# Node property reading
+# ============================================================
+
+func get_node_properties(params):
+    var result = _load_scene(params)
+    var scene_root = result[0]
+
+    var node = _find_node(scene_root, params.node_path)
+    var output = {}
+
+    if params.has("properties"):
+        for prop_name in params.properties:
+            var value = node.get(prop_name)
+            output[prop_name] = _serialize_value(value)
+    else:
+        for prop in node.get_property_list():
+            var pname = prop.name
+            if pname.begins_with("_") or pname == "script":
+                continue
+            var value = node.get(pname)
+            if value != null:
+                output[pname] = _serialize_value(value)
+
+    var json = JSON.new()
+    print(json.stringify(output, "  "))
+
+func _serialize_value(value) -> Variant:
+    if value is Vector2:
+        return {"x": value.x, "y": value.y}
+    elif value is Vector2i:
+        return {"x": value.x, "y": value.y}
+    elif value is Vector3:
+        return {"x": value.x, "y": value.y, "z": value.z}
+    elif value is Color:
+        return {"r": value.r, "g": value.g, "b": value.b, "a": value.a}
+    elif value is Rect2:
+        return {"x": value.position.x, "y": value.position.y, "w": value.size.x, "h": value.size.y}
+    elif value is NodePath:
+        return str(value)
+    elif value is Resource:
+        return value.resource_path if value.resource_path != "" else str(value)
+    elif value is Array:
+        var arr = []
+        for item in value:
+            arr.append(_serialize_value(item))
+        return arr
+    return value
+
+# ============================================================
+# Animation player creation helper
+# ============================================================
+
+func create_animation_player(params):
+    var result = _load_scene(params)
+    var scene_root = result[0]
+    var absolute_scene_path = result[2]
+
+    var parent = scene_root
+    if params.has("parent_node_path") and params.parent_node_path != "":
+        parent = _find_node(scene_root, params.parent_node_path)
+
+    var anim_player = AnimationPlayer.new()
+    anim_player.name = params.get("node_name", "AnimationPlayer")
+    parent.add_child(anim_player)
+    anim_player.owner = scene_root
+
+    if params.has("animations"):
+        var lib = AnimationLibrary.new()
+        for anim_data in params.animations:
+            var animation = Animation.new()
+            animation.length = anim_data.get("length", 1.0)
+            if anim_data.get("loop", false):
+                animation.loop_mode = Animation.LOOP_LINEAR
+
+            if anim_data.has("tracks"):
+                for track_data in anim_data.tracks:
+                    var track_idx = animation.add_track(Animation.TYPE_VALUE)
+                    animation.track_set_path(track_idx, NodePath(track_data.path))
+
+                    if track_data.has("keyframes"):
+                        for kf in track_data.keyframes:
+                            var value = kf.value
+                            if value is Dictionary and value.has("x") and value.has("y"):
+                                if value.has("z"):
+                                    value = Vector3(value.x, value.y, value.z)
+                                else:
+                                    value = Vector2(value.x, value.y)
+                            animation.track_insert_key(track_idx, kf.time, value)
+
+            lib.add_animation(anim_data.name, animation)
+        anim_player.add_animation_library("", lib)
+
+    _save_scene(scene_root, absolute_scene_path)
+    print("AnimationPlayer '" + anim_player.name + "' created")
+
+# ============================================================
+# Autoload management
+# ============================================================
+
+func manage_autoloads(params):
+    var action: String = params.action
+    var autoload_name: String = params.get("name", "")
+
+    if action == "add":
+        var script_path: String = params.script_path
+        if not script_path.begins_with("res://"):
+            script_path = "res://" + script_path
+
+        var absolute_path = ProjectSettings.globalize_path(script_path)
+        if not FileAccess.file_exists(absolute_path):
+            printerr("Script file does not exist: " + script_path)
+            quit(1)
+
+        ProjectSettings.set_setting("autoload/" + autoload_name, "*" + script_path)
+        ProjectSettings.save()
+        print("Autoload '" + autoload_name + "' added: " + script_path)
+
+    elif action == "remove":
+        var setting_name = "autoload/" + autoload_name
+        if ProjectSettings.has_setting(setting_name):
+            ProjectSettings.set_setting(setting_name, null)
+            ProjectSettings.save()
+            print("Autoload '" + autoload_name + "' removed")
+        else:
+            printerr("Autoload not found: " + autoload_name)
+            quit(1)
+
+    elif action == "list":
+        var autoloads = {}
+        for prop in ProjectSettings.get_property_list():
+            var pname = prop.name
+            if pname.begins_with("autoload/"):
+                var al_name = pname.substr(9)
+                autoloads[al_name] = ProjectSettings.get_setting(pname)
+        var json = JSON.new()
+        print(json.stringify(autoloads, "  "))
+
+    else:
+        printerr("Unknown action: " + action + ". Use 'add', 'remove', or 'list'")
+        quit(1)
+
+# ============================================================
+# Collision layer/mask helper
+# ============================================================
+
+func set_collision_layer_mask(params):
+    var result = _load_scene(params)
+    var scene_root = result[0]
+    var absolute_scene_path = result[2]
+
+    var node = _find_node(scene_root, params.node_path)
+
+    if not "collision_layer" in node and not "collision_mask" in node:
+        printerr("Node does not support collision layers: " + params.node_path)
+        quit(1)
+
+    if params.has("collision_layer"):
+        var layer_value: int = 0
+        if params.collision_layer is Array:
+            for bit in params.collision_layer:
+                layer_value |= (1 << (int(bit) - 1))
+        else:
+            layer_value = int(params.collision_layer)
+        node.collision_layer = layer_value
+
+    if params.has("collision_mask"):
+        var mask_value: int = 0
+        if params.collision_mask is Array:
+            for bit in params.collision_mask:
+                mask_value |= (1 << (int(bit) - 1))
+        else:
+            mask_value = int(params.collision_mask)
+        node.collision_mask = mask_value
+
+    _save_scene(scene_root, absolute_scene_path)
+
+    var info = "Collision updated on '" + params.node_path + "'"
+    if params.has("collision_layer"):
+        info += " | layer=" + str(node.collision_layer)
+    if params.has("collision_mask"):
+        info += " | mask=" + str(node.collision_mask)
+    print(info)

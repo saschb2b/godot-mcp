@@ -86,6 +86,13 @@ class GodotServer {
     directory: "directory",
     recursive: "recursive",
     scene: "scene",
+    child_scene_path: "childScenePath",
+    animation_name: "animationName",
+    script_path: "scriptPath",
+    custom_data: "customData",
+    new_name: "newName",
+    collision_layer: "collisionLayer",
+    collision_mask: "collisionMask",
   };
 
   /**
@@ -1374,6 +1381,410 @@ class GodotServer {
             required: ["projectPath"],
           },
         },
+        {
+          name: "add_to_group",
+          description: "Add a node to one or more groups in a scene",
+          inputSchema: {
+            type: "object",
+            properties: {
+              projectPath: {
+                type: "string",
+                description: "Path to the Godot project directory",
+              },
+              scenePath: {
+                type: "string",
+                description: "Path to the scene file (relative to project)",
+              },
+              nodePath: {
+                type: "string",
+                description: "Path to the node (e.g., 'root/Player')",
+              },
+              groups: {
+                type: "array",
+                items: { type: "string" },
+                description: "Array of group names to add the node to",
+              },
+            },
+            required: ["projectPath", "scenePath", "nodePath", "groups"],
+          },
+        },
+        {
+          name: "remove_from_group",
+          description: "Remove a node from one or more groups in a scene",
+          inputSchema: {
+            type: "object",
+            properties: {
+              projectPath: {
+                type: "string",
+                description: "Path to the Godot project directory",
+              },
+              scenePath: {
+                type: "string",
+                description: "Path to the scene file (relative to project)",
+              },
+              nodePath: {
+                type: "string",
+                description: "Path to the node (e.g., 'root/Player')",
+              },
+              groups: {
+                type: "array",
+                items: { type: "string" },
+                description: "Array of group names to remove the node from",
+              },
+            },
+            required: ["projectPath", "scenePath", "nodePath", "groups"],
+          },
+        },
+        {
+          name: "instantiate_scene",
+          description:
+            "Add a scene as a child instance of another scene (e.g., spawn a player scene inside a level)",
+          inputSchema: {
+            type: "object",
+            properties: {
+              projectPath: {
+                type: "string",
+                description: "Path to the Godot project directory",
+              },
+              scenePath: {
+                type: "string",
+                description:
+                  "Path to the parent scene file (relative to project)",
+              },
+              childScenePath: {
+                type: "string",
+                description:
+                  "Path to the scene to instantiate (relative to project)",
+              },
+              parentNodePath: {
+                type: "string",
+                description:
+                  "Path to the parent node within the scene (default: root)",
+              },
+              nodeName: {
+                type: "string",
+                description: "Custom name for the instanced node",
+              },
+              position: {
+                type: "object",
+                properties: {
+                  x: { type: "number" },
+                  y: { type: "number" },
+                  z: { type: "number" },
+                },
+                description: "Position for the instanced node",
+              },
+            },
+            required: ["projectPath", "scenePath", "childScenePath"],
+          },
+        },
+        {
+          name: "add_animation",
+          description:
+            "Add an animation to an existing AnimationPlayer node with tracks and keyframes",
+          inputSchema: {
+            type: "object",
+            properties: {
+              projectPath: {
+                type: "string",
+                description: "Path to the Godot project directory",
+              },
+              scenePath: {
+                type: "string",
+                description: "Path to the scene file (relative to project)",
+              },
+              nodePath: {
+                type: "string",
+                description: "Path to the AnimationPlayer node",
+              },
+              animationName: {
+                type: "string",
+                description: "Name of the animation to create",
+              },
+              length: {
+                type: "number",
+                description: "Animation length in seconds (default: 1.0)",
+              },
+              loop: {
+                type: "boolean",
+                description:
+                  "Whether the animation should loop (default: false)",
+              },
+              tracks: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    path: {
+                      type: "string",
+                      description:
+                        "Node path and property (e.g., 'Sprite2D:frame')",
+                    },
+                    type: {
+                      type: "string",
+                      enum: ["value", "method", "bezier"],
+                      description: "Track type (default: value)",
+                    },
+                    interpolation: {
+                      type: "string",
+                      enum: ["nearest", "linear", "cubic"],
+                    },
+                    keyframes: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: { time: { type: "number" }, value: {} },
+                        required: ["time", "value"],
+                      },
+                    },
+                  },
+                  required: ["path"],
+                },
+                description: "Animation tracks with keyframes",
+              },
+            },
+            required: ["projectPath", "scenePath", "nodePath", "animationName"],
+          },
+        },
+        {
+          name: "read_script",
+          description:
+            "Read the contents of a GDScript file from a Godot project",
+          inputSchema: {
+            type: "object",
+            properties: {
+              projectPath: {
+                type: "string",
+                description: "Path to the Godot project directory",
+              },
+              scriptPath: {
+                type: "string",
+                description: "Path to the script file (relative to project)",
+              },
+            },
+            required: ["projectPath", "scriptPath"],
+          },
+        },
+        {
+          name: "set_custom_tile_data",
+          description:
+            "Set custom data layer values on specific tile cells in a TileMapLayer",
+          inputSchema: {
+            type: "object",
+            properties: {
+              projectPath: {
+                type: "string",
+                description: "Path to the Godot project directory",
+              },
+              scenePath: {
+                type: "string",
+                description: "Path to the scene file (relative to project)",
+              },
+              nodePath: {
+                type: "string",
+                description: "Path to the TileMapLayer node",
+              },
+              cells: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    x: { type: "integer" },
+                    y: { type: "integer" },
+                    customData: {
+                      type: "object",
+                      description:
+                        "Key-value pairs of custom data layer name to value",
+                    },
+                  },
+                  required: ["x", "y", "customData"],
+                },
+                description: "Array of cells with custom data to set",
+              },
+            },
+            required: ["projectPath", "scenePath", "nodePath", "cells"],
+          },
+        },
+        {
+          name: "duplicate_node",
+          description:
+            "Duplicate a node within a scene, optionally with a new name or different parent",
+          inputSchema: {
+            type: "object",
+            properties: {
+              projectPath: {
+                type: "string",
+                description: "Path to the Godot project directory",
+              },
+              scenePath: {
+                type: "string",
+                description: "Path to the scene file (relative to project)",
+              },
+              nodePath: {
+                type: "string",
+                description: "Path to the node to duplicate",
+              },
+              newName: {
+                type: "string",
+                description: "Name for the duplicated node",
+              },
+              parentNodePath: {
+                type: "string",
+                description:
+                  "Path to parent for the duplicate (default: same parent as original)",
+              },
+            },
+            required: ["projectPath", "scenePath", "nodePath"],
+          },
+        },
+        {
+          name: "get_node_properties",
+          description:
+            "Read properties from a node in a scene. Returns all non-default properties, or specific ones if listed.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              projectPath: {
+                type: "string",
+                description: "Path to the Godot project directory",
+              },
+              scenePath: {
+                type: "string",
+                description: "Path to the scene file (relative to project)",
+              },
+              nodePath: { type: "string", description: "Path to the node" },
+              properties: {
+                type: "array",
+                items: { type: "string" },
+                description:
+                  "Optional: specific property names to read (default: all)",
+              },
+            },
+            required: ["projectPath", "scenePath", "nodePath"],
+          },
+        },
+        {
+          name: "create_animation_player",
+          description:
+            "Create an AnimationPlayer node with optional pre-configured animations",
+          inputSchema: {
+            type: "object",
+            properties: {
+              projectPath: {
+                type: "string",
+                description: "Path to the Godot project directory",
+              },
+              scenePath: {
+                type: "string",
+                description: "Path to the scene file (relative to project)",
+              },
+              parentNodePath: {
+                type: "string",
+                description: "Path to the parent node (default: root)",
+              },
+              nodeName: {
+                type: "string",
+                description:
+                  "Name for the AnimationPlayer (default: 'AnimationPlayer')",
+              },
+              animations: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    length: { type: "number" },
+                    loop: { type: "boolean" },
+                    tracks: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          path: { type: "string" },
+                          keyframes: {
+                            type: "array",
+                            items: {
+                              type: "object",
+                              properties: {
+                                time: { type: "number" },
+                                value: {},
+                              },
+                              required: ["time", "value"],
+                            },
+                          },
+                        },
+                        required: ["path"],
+                      },
+                    },
+                  },
+                  required: ["name"],
+                },
+                description: "Animations to create with the player",
+              },
+            },
+            required: ["projectPath", "scenePath"],
+          },
+        },
+        {
+          name: "manage_autoloads",
+          description:
+            "Add, remove, or list autoload singletons in project.godot",
+          inputSchema: {
+            type: "object",
+            properties: {
+              projectPath: {
+                type: "string",
+                description: "Path to the Godot project directory",
+              },
+              action: {
+                type: "string",
+                enum: ["add", "remove", "list"],
+                description: "Action to perform",
+              },
+              name: {
+                type: "string",
+                description: "Autoload name (required for add/remove)",
+              },
+              scriptPath: {
+                type: "string",
+                description:
+                  "Path to the script (required for add, relative to project)",
+              },
+            },
+            required: ["projectPath", "action"],
+          },
+        },
+        {
+          name: "set_collision_layer_mask",
+          description:
+            "Set collision layer and/or mask on a physics node. Accepts layer numbers (1-32) as array or raw bitmask.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              projectPath: {
+                type: "string",
+                description: "Path to the Godot project directory",
+              },
+              scenePath: {
+                type: "string",
+                description: "Path to the scene file (relative to project)",
+              },
+              nodePath: {
+                type: "string",
+                description: "Path to the physics node",
+              },
+              collisionLayer: {
+                description:
+                  "Array of layer numbers [1,2,3] or raw bitmask integer",
+              },
+              collisionMask: {
+                description:
+                  "Array of mask numbers [1,2,3] or raw bitmask integer",
+              },
+            },
+            required: ["projectPath", "scenePath", "nodePath"],
+          },
+        },
       ],
     }));
 
@@ -1435,6 +1846,32 @@ class GodotServer {
           return await this.handleGetUid(request.params.arguments);
         case "update_project_uids":
           return await this.handleUpdateProjectUids(request.params.arguments);
+        case "add_to_group":
+          return await this.handleAddToGroup(request.params.arguments);
+        case "remove_from_group":
+          return await this.handleRemoveFromGroup(request.params.arguments);
+        case "instantiate_scene":
+          return await this.handleInstantiateScene(request.params.arguments);
+        case "add_animation":
+          return await this.handleAddAnimation(request.params.arguments);
+        case "read_script":
+          return await this.handleReadScript(request.params.arguments);
+        case "set_custom_tile_data":
+          return await this.handleSetCustomTileData(request.params.arguments);
+        case "duplicate_node":
+          return await this.handleDuplicateNode(request.params.arguments);
+        case "get_node_properties":
+          return await this.handleGetNodeProperties(request.params.arguments);
+        case "create_animation_player":
+          return await this.handleCreateAnimationPlayer(
+            request.params.arguments,
+          );
+        case "manage_autoloads":
+          return await this.handleManageAutoloads(request.params.arguments);
+        case "set_collision_layer_mask":
+          return await this.handleSetCollisionLayerMask(
+            request.params.arguments,
+          );
         default:
           throw new McpError(
             ErrorCode.MethodNotFound,
@@ -3592,6 +4029,837 @@ class GodotServer {
           "Check if the GODOT_PATH environment variable is set correctly",
           "Verify the project path is accessible",
         ],
+      );
+    }
+  }
+
+  /**
+   * Handle the add_to_group tool
+   */
+  private async handleAddToGroup(args: any) {
+    args = this.normalizeParameters(args);
+
+    if (
+      !args.projectPath ||
+      !args.scenePath ||
+      !args.nodePath ||
+      !args.groups
+    ) {
+      return this.createErrorResponse("Missing required parameters", [
+        "Provide projectPath, scenePath, nodePath, and groups",
+      ]);
+    }
+
+    if (
+      !this.validatePath(args.projectPath) ||
+      !this.validatePath(args.scenePath)
+    ) {
+      return this.createErrorResponse("Invalid path", [
+        'Provide valid paths without ".."',
+      ]);
+    }
+
+    try {
+      const projectFile = join(args.projectPath, "project.godot");
+      if (!existsSync(projectFile)) {
+        return this.createErrorResponse(
+          `Not a valid Godot project: ${args.projectPath}`,
+          ["Ensure the path contains a project.godot file"],
+        );
+      }
+
+      const scenePath = join(args.projectPath, args.scenePath);
+      if (!existsSync(scenePath)) {
+        return this.createErrorResponse(
+          `Scene file does not exist: ${args.scenePath}`,
+          ["Ensure the scene path is correct"],
+        );
+      }
+
+      const params = {
+        scenePath: args.scenePath,
+        nodePath: args.nodePath,
+        groups: args.groups,
+      };
+      const { stdout, stderr } = await this.executeOperation(
+        "add_to_group",
+        params,
+        args.projectPath,
+      );
+
+      if (stderr.includes("Failed to")) {
+        return this.createErrorResponse(
+          `Failed to add node to group: ${stderr}`,
+          ["Check if the node path exists"],
+        );
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Node '${args.nodePath}' added to groups [${args.groups.join(", ")}].\n\nOutput: ${stdout}`,
+          },
+        ],
+      };
+    } catch (error: any) {
+      return this.createErrorResponse(
+        `Failed to add node to group: ${error?.message ?? "Unknown error"}`,
+        ["Ensure Godot is installed correctly"],
+      );
+    }
+  }
+
+  /**
+   * Handle the remove_from_group tool
+   */
+  private async handleRemoveFromGroup(args: any) {
+    args = this.normalizeParameters(args);
+
+    if (
+      !args.projectPath ||
+      !args.scenePath ||
+      !args.nodePath ||
+      !args.groups
+    ) {
+      return this.createErrorResponse("Missing required parameters", [
+        "Provide projectPath, scenePath, nodePath, and groups",
+      ]);
+    }
+
+    if (
+      !this.validatePath(args.projectPath) ||
+      !this.validatePath(args.scenePath)
+    ) {
+      return this.createErrorResponse("Invalid path", [
+        'Provide valid paths without ".."',
+      ]);
+    }
+
+    try {
+      const projectFile = join(args.projectPath, "project.godot");
+      if (!existsSync(projectFile)) {
+        return this.createErrorResponse(
+          `Not a valid Godot project: ${args.projectPath}`,
+          ["Ensure the path contains a project.godot file"],
+        );
+      }
+
+      const scenePath = join(args.projectPath, args.scenePath);
+      if (!existsSync(scenePath)) {
+        return this.createErrorResponse(
+          `Scene file does not exist: ${args.scenePath}`,
+          ["Ensure the scene path is correct"],
+        );
+      }
+
+      const params = {
+        scenePath: args.scenePath,
+        nodePath: args.nodePath,
+        groups: args.groups,
+      };
+      const { stdout, stderr } = await this.executeOperation(
+        "remove_from_group",
+        params,
+        args.projectPath,
+      );
+
+      if (stderr.includes("Failed to")) {
+        return this.createErrorResponse(
+          `Failed to remove node from group: ${stderr}`,
+          ["Check if the node path exists"],
+        );
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Node '${args.nodePath}' removed from groups [${args.groups.join(", ")}].\n\nOutput: ${stdout}`,
+          },
+        ],
+      };
+    } catch (error: any) {
+      return this.createErrorResponse(
+        `Failed to remove node from group: ${error?.message ?? "Unknown error"}`,
+        ["Ensure Godot is installed correctly"],
+      );
+    }
+  }
+
+  /**
+   * Handle the instantiate_scene tool
+   */
+  private async handleInstantiateScene(args: any) {
+    args = this.normalizeParameters(args);
+
+    if (!args.projectPath || !args.scenePath || !args.childScenePath) {
+      return this.createErrorResponse("Missing required parameters", [
+        "Provide projectPath, scenePath, and childScenePath",
+      ]);
+    }
+
+    if (
+      !this.validatePath(args.projectPath) ||
+      !this.validatePath(args.scenePath)
+    ) {
+      return this.createErrorResponse("Invalid path", [
+        'Provide valid paths without ".."',
+      ]);
+    }
+
+    try {
+      const projectFile = join(args.projectPath, "project.godot");
+      if (!existsSync(projectFile)) {
+        return this.createErrorResponse(
+          `Not a valid Godot project: ${args.projectPath}`,
+          ["Ensure the path contains a project.godot file"],
+        );
+      }
+
+      const scenePath = join(args.projectPath, args.scenePath);
+      if (!existsSync(scenePath)) {
+        return this.createErrorResponse(
+          `Scene file does not exist: ${args.scenePath}`,
+          ["Ensure the scene path is correct"],
+        );
+      }
+
+      const params: OperationParams = {
+        scenePath: args.scenePath,
+        childScenePath: args.childScenePath,
+      };
+      if (args.parentNodePath) params.parentNodePath = args.parentNodePath;
+      if (args.nodeName) params.nodeName = args.nodeName;
+      if (args.position) params.position = args.position;
+
+      const { stdout, stderr } = await this.executeOperation(
+        "instantiate_scene",
+        params,
+        args.projectPath,
+      );
+
+      if (stderr.includes("Failed to")) {
+        return this.createErrorResponse(
+          `Failed to instantiate scene: ${stderr}`,
+          ["Check if the child scene path exists"],
+        );
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Scene '${args.childScenePath}' instantiated in '${args.scenePath}'.\n\nOutput: ${stdout}`,
+          },
+        ],
+      };
+    } catch (error: any) {
+      return this.createErrorResponse(
+        `Failed to instantiate scene: ${error?.message ?? "Unknown error"}`,
+        ["Ensure Godot is installed correctly"],
+      );
+    }
+  }
+
+  /**
+   * Handle the add_animation tool
+   */
+  private async handleAddAnimation(args: any) {
+    args = this.normalizeParameters(args);
+
+    if (
+      !args.projectPath ||
+      !args.scenePath ||
+      !args.nodePath ||
+      !args.animationName
+    ) {
+      return this.createErrorResponse("Missing required parameters", [
+        "Provide projectPath, scenePath, nodePath, and animationName",
+      ]);
+    }
+
+    if (
+      !this.validatePath(args.projectPath) ||
+      !this.validatePath(args.scenePath)
+    ) {
+      return this.createErrorResponse("Invalid path", [
+        'Provide valid paths without ".."',
+      ]);
+    }
+
+    try {
+      const projectFile = join(args.projectPath, "project.godot");
+      if (!existsSync(projectFile)) {
+        return this.createErrorResponse(
+          `Not a valid Godot project: ${args.projectPath}`,
+          ["Ensure the path contains a project.godot file"],
+        );
+      }
+
+      const scenePath = join(args.projectPath, args.scenePath);
+      if (!existsSync(scenePath)) {
+        return this.createErrorResponse(
+          `Scene file does not exist: ${args.scenePath}`,
+          ["Ensure the scene path is correct"],
+        );
+      }
+
+      const params: OperationParams = {
+        scenePath: args.scenePath,
+        nodePath: args.nodePath,
+        animationName: args.animationName,
+      };
+      if (args.length !== undefined) params.length = args.length;
+      if (args.loop !== undefined) params.loop = args.loop;
+      if (args.tracks) params.tracks = args.tracks;
+
+      const { stdout, stderr } = await this.executeOperation(
+        "add_animation",
+        params,
+        args.projectPath,
+      );
+
+      if (stderr.includes("Failed to")) {
+        return this.createErrorResponse(`Failed to add animation: ${stderr}`, [
+          "Check if the AnimationPlayer node path exists",
+        ]);
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Animation '${args.animationName}' added to '${args.nodePath}'.\n\nOutput: ${stdout}`,
+          },
+        ],
+      };
+    } catch (error: any) {
+      return this.createErrorResponse(
+        `Failed to add animation: ${error?.message ?? "Unknown error"}`,
+        ["Ensure Godot is installed correctly"],
+      );
+    }
+  }
+
+  /**
+   * Handle the read_script tool
+   */
+  private async handleReadScript(args: any) {
+    args = this.normalizeParameters(args);
+
+    if (!args.projectPath || !args.scriptPath) {
+      return this.createErrorResponse("Missing required parameters", [
+        "Provide projectPath and scriptPath",
+      ]);
+    }
+
+    if (
+      !this.validatePath(args.projectPath) ||
+      !this.validatePath(args.scriptPath)
+    ) {
+      return this.createErrorResponse("Invalid path", [
+        'Provide valid paths without ".."',
+      ]);
+    }
+
+    try {
+      const projectFile = join(args.projectPath, "project.godot");
+      if (!existsSync(projectFile)) {
+        return this.createErrorResponse(
+          `Not a valid Godot project: ${args.projectPath}`,
+          ["Ensure the path contains a project.godot file"],
+        );
+      }
+
+      const scriptFile = join(args.projectPath, args.scriptPath);
+      if (!existsSync(scriptFile)) {
+        return this.createErrorResponse(
+          `Script file does not exist: ${args.scriptPath}`,
+          ["Ensure the script path is correct"],
+        );
+      }
+
+      const params = { scriptPath: args.scriptPath };
+      const { stdout, stderr } = await this.executeOperation(
+        "read_script",
+        params,
+        args.projectPath,
+      );
+
+      if (stderr.includes("Failed to")) {
+        return this.createErrorResponse(`Failed to read script: ${stderr}`, [
+          "Check if the script path is correct",
+        ]);
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: stdout,
+          },
+        ],
+      };
+    } catch (error: any) {
+      return this.createErrorResponse(
+        `Failed to read script: ${error?.message ?? "Unknown error"}`,
+        ["Ensure Godot is installed correctly"],
+      );
+    }
+  }
+
+  /**
+   * Handle the set_custom_tile_data tool
+   */
+  private async handleSetCustomTileData(args: any) {
+    args = this.normalizeParameters(args);
+
+    if (!args.projectPath || !args.scenePath || !args.nodePath || !args.cells) {
+      return this.createErrorResponse("Missing required parameters", [
+        "Provide projectPath, scenePath, nodePath, and cells",
+      ]);
+    }
+
+    if (
+      !this.validatePath(args.projectPath) ||
+      !this.validatePath(args.scenePath)
+    ) {
+      return this.createErrorResponse("Invalid path", [
+        'Provide valid paths without ".."',
+      ]);
+    }
+
+    try {
+      const projectFile = join(args.projectPath, "project.godot");
+      if (!existsSync(projectFile)) {
+        return this.createErrorResponse(
+          `Not a valid Godot project: ${args.projectPath}`,
+          ["Ensure the path contains a project.godot file"],
+        );
+      }
+
+      const scenePath = join(args.projectPath, args.scenePath);
+      if (!existsSync(scenePath)) {
+        return this.createErrorResponse(
+          `Scene file does not exist: ${args.scenePath}`,
+          ["Ensure the scene path is correct"],
+        );
+      }
+
+      const params = {
+        scenePath: args.scenePath,
+        nodePath: args.nodePath,
+        cells: args.cells,
+      };
+      const { stdout, stderr } = await this.executeOperation(
+        "set_custom_tile_data",
+        params,
+        args.projectPath,
+      );
+
+      if (stderr.includes("Failed to")) {
+        return this.createErrorResponse(
+          `Failed to set custom tile data: ${stderr}`,
+          ["Check if the TileMapLayer node path exists"],
+        );
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Custom tile data set on '${args.nodePath}'.\n\nOutput: ${stdout}`,
+          },
+        ],
+      };
+    } catch (error: any) {
+      return this.createErrorResponse(
+        `Failed to set custom tile data: ${error?.message ?? "Unknown error"}`,
+        ["Ensure Godot is installed correctly"],
+      );
+    }
+  }
+
+  /**
+   * Handle the duplicate_node tool
+   */
+  private async handleDuplicateNode(args: any) {
+    args = this.normalizeParameters(args);
+
+    if (!args.projectPath || !args.scenePath || !args.nodePath) {
+      return this.createErrorResponse("Missing required parameters", [
+        "Provide projectPath, scenePath, and nodePath",
+      ]);
+    }
+
+    if (
+      !this.validatePath(args.projectPath) ||
+      !this.validatePath(args.scenePath)
+    ) {
+      return this.createErrorResponse("Invalid path", [
+        'Provide valid paths without ".."',
+      ]);
+    }
+
+    try {
+      const projectFile = join(args.projectPath, "project.godot");
+      if (!existsSync(projectFile)) {
+        return this.createErrorResponse(
+          `Not a valid Godot project: ${args.projectPath}`,
+          ["Ensure the path contains a project.godot file"],
+        );
+      }
+
+      const scenePath = join(args.projectPath, args.scenePath);
+      if (!existsSync(scenePath)) {
+        return this.createErrorResponse(
+          `Scene file does not exist: ${args.scenePath}`,
+          ["Ensure the scene path is correct"],
+        );
+      }
+
+      const params: OperationParams = {
+        scenePath: args.scenePath,
+        nodePath: args.nodePath,
+      };
+      if (args.newName) params.newName = args.newName;
+      if (args.parentNodePath) params.parentNodePath = args.parentNodePath;
+
+      const { stdout, stderr } = await this.executeOperation(
+        "duplicate_node",
+        params,
+        args.projectPath,
+      );
+
+      if (stderr.includes("Failed to")) {
+        return this.createErrorResponse(`Failed to duplicate node: ${stderr}`, [
+          "Check if the node path exists",
+        ]);
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Node '${args.nodePath}' duplicated${args.newName ? ` as '${args.newName}'` : ""}.\n\nOutput: ${stdout}`,
+          },
+        ],
+      };
+    } catch (error: any) {
+      return this.createErrorResponse(
+        `Failed to duplicate node: ${error?.message ?? "Unknown error"}`,
+        ["Ensure Godot is installed correctly"],
+      );
+    }
+  }
+
+  /**
+   * Handle the get_node_properties tool
+   */
+  private async handleGetNodeProperties(args: any) {
+    args = this.normalizeParameters(args);
+
+    if (!args.projectPath || !args.scenePath || !args.nodePath) {
+      return this.createErrorResponse("Missing required parameters", [
+        "Provide projectPath, scenePath, and nodePath",
+      ]);
+    }
+
+    if (
+      !this.validatePath(args.projectPath) ||
+      !this.validatePath(args.scenePath)
+    ) {
+      return this.createErrorResponse("Invalid path", [
+        'Provide valid paths without ".."',
+      ]);
+    }
+
+    try {
+      const projectFile = join(args.projectPath, "project.godot");
+      if (!existsSync(projectFile)) {
+        return this.createErrorResponse(
+          `Not a valid Godot project: ${args.projectPath}`,
+          ["Ensure the path contains a project.godot file"],
+        );
+      }
+
+      const scenePath = join(args.projectPath, args.scenePath);
+      if (!existsSync(scenePath)) {
+        return this.createErrorResponse(
+          `Scene file does not exist: ${args.scenePath}`,
+          ["Ensure the scene path is correct"],
+        );
+      }
+
+      const params: OperationParams = {
+        scenePath: args.scenePath,
+        nodePath: args.nodePath,
+      };
+      if (args.properties) params.properties = args.properties;
+
+      const { stdout, stderr } = await this.executeOperation(
+        "get_node_properties",
+        params,
+        args.projectPath,
+      );
+
+      if (stderr.includes("Failed to")) {
+        return this.createErrorResponse(
+          `Failed to get node properties: ${stderr}`,
+          ["Check if the node path exists"],
+        );
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: stdout,
+          },
+        ],
+      };
+    } catch (error: any) {
+      return this.createErrorResponse(
+        `Failed to get node properties: ${error?.message ?? "Unknown error"}`,
+        ["Ensure Godot is installed correctly"],
+      );
+    }
+  }
+
+  /**
+   * Handle the create_animation_player tool
+   */
+  private async handleCreateAnimationPlayer(args: any) {
+    args = this.normalizeParameters(args);
+
+    if (!args.projectPath || !args.scenePath) {
+      return this.createErrorResponse("Missing required parameters", [
+        "Provide projectPath and scenePath",
+      ]);
+    }
+
+    if (
+      !this.validatePath(args.projectPath) ||
+      !this.validatePath(args.scenePath)
+    ) {
+      return this.createErrorResponse("Invalid path", [
+        'Provide valid paths without ".."',
+      ]);
+    }
+
+    try {
+      const projectFile = join(args.projectPath, "project.godot");
+      if (!existsSync(projectFile)) {
+        return this.createErrorResponse(
+          `Not a valid Godot project: ${args.projectPath}`,
+          ["Ensure the path contains a project.godot file"],
+        );
+      }
+
+      const scenePath = join(args.projectPath, args.scenePath);
+      if (!existsSync(scenePath)) {
+        return this.createErrorResponse(
+          `Scene file does not exist: ${args.scenePath}`,
+          ["Ensure the scene path is correct"],
+        );
+      }
+
+      const params: OperationParams = {
+        scenePath: args.scenePath,
+      };
+      if (args.parentNodePath) params.parentNodePath = args.parentNodePath;
+      if (args.nodeName) params.nodeName = args.nodeName;
+      if (args.animations) params.animations = args.animations;
+
+      const { stdout, stderr } = await this.executeOperation(
+        "create_animation_player",
+        params,
+        args.projectPath,
+      );
+
+      if (stderr.includes("Failed to")) {
+        return this.createErrorResponse(
+          `Failed to create AnimationPlayer: ${stderr}`,
+          ["Check if the parent node path exists"],
+        );
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `AnimationPlayer '${args.nodeName ?? "AnimationPlayer"}' created.\n\nOutput: ${stdout}`,
+          },
+        ],
+      };
+    } catch (error: any) {
+      return this.createErrorResponse(
+        `Failed to create AnimationPlayer: ${error?.message ?? "Unknown error"}`,
+        ["Ensure Godot is installed correctly"],
+      );
+    }
+  }
+
+  /**
+   * Handle the manage_autoloads tool
+   */
+  private async handleManageAutoloads(args: any) {
+    args = this.normalizeParameters(args);
+
+    if (!args.projectPath || !args.action) {
+      return this.createErrorResponse("Missing required parameters", [
+        "Provide projectPath and action",
+      ]);
+    }
+
+    if (!this.validatePath(args.projectPath)) {
+      return this.createErrorResponse("Invalid path", [
+        'Provide a valid path without ".."',
+      ]);
+    }
+
+    try {
+      const projectFile = join(args.projectPath, "project.godot");
+      if (!existsSync(projectFile)) {
+        return this.createErrorResponse(
+          `Not a valid Godot project: ${args.projectPath}`,
+          ["Ensure the path contains a project.godot file"],
+        );
+      }
+
+      if (args.action === "add") {
+        if (!args.name || !args.scriptPath) {
+          return this.createErrorResponse(
+            "Missing required parameters for add",
+            ["Provide name and scriptPath when adding an autoload"],
+          );
+        }
+        const scriptFile = join(args.projectPath, args.scriptPath);
+        if (!existsSync(scriptFile)) {
+          return this.createErrorResponse(
+            `Script file does not exist: ${args.scriptPath}`,
+            ["Ensure the script path is correct"],
+          );
+        }
+      }
+
+      if (args.action === "remove") {
+        if (!args.name) {
+          return this.createErrorResponse(
+            "Missing required parameters for remove",
+            ["Provide name when removing an autoload"],
+          );
+        }
+      }
+
+      const params: OperationParams = {
+        action: args.action,
+      };
+      if (args.name) params.name = args.name;
+      if (args.scriptPath) params.scriptPath = args.scriptPath;
+
+      const { stdout, stderr } = await this.executeOperation(
+        "manage_autoloads",
+        params,
+        args.projectPath,
+      );
+
+      if (stderr.includes("Failed to")) {
+        return this.createErrorResponse(
+          `Failed to manage autoloads: ${stderr}`,
+          ["Check the autoload name and script path"],
+        );
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: stdout,
+          },
+        ],
+      };
+    } catch (error: any) {
+      return this.createErrorResponse(
+        `Failed to manage autoloads: ${error?.message ?? "Unknown error"}`,
+        ["Ensure Godot is installed correctly"],
+      );
+    }
+  }
+
+  /**
+   * Handle the set_collision_layer_mask tool
+   */
+  private async handleSetCollisionLayerMask(args: any) {
+    args = this.normalizeParameters(args);
+
+    if (!args.projectPath || !args.scenePath || !args.nodePath) {
+      return this.createErrorResponse("Missing required parameters", [
+        "Provide projectPath, scenePath, and nodePath",
+      ]);
+    }
+
+    if (
+      !this.validatePath(args.projectPath) ||
+      !this.validatePath(args.scenePath)
+    ) {
+      return this.createErrorResponse("Invalid path", [
+        'Provide valid paths without ".."',
+      ]);
+    }
+
+    try {
+      const projectFile = join(args.projectPath, "project.godot");
+      if (!existsSync(projectFile)) {
+        return this.createErrorResponse(
+          `Not a valid Godot project: ${args.projectPath}`,
+          ["Ensure the path contains a project.godot file"],
+        );
+      }
+
+      const scenePath = join(args.projectPath, args.scenePath);
+      if (!existsSync(scenePath)) {
+        return this.createErrorResponse(
+          `Scene file does not exist: ${args.scenePath}`,
+          ["Ensure the scene path is correct"],
+        );
+      }
+
+      const params: OperationParams = {
+        scenePath: args.scenePath,
+        nodePath: args.nodePath,
+      };
+      if (args.collisionLayer !== undefined)
+        params.collisionLayer = args.collisionLayer;
+      if (args.collisionMask !== undefined)
+        params.collisionMask = args.collisionMask;
+
+      const { stdout, stderr } = await this.executeOperation(
+        "set_collision_layer_mask",
+        params,
+        args.projectPath,
+      );
+
+      if (stderr.includes("Failed to")) {
+        return this.createErrorResponse(
+          `Failed to set collision layer/mask: ${stderr}`,
+          ["Check if the physics node path exists"],
+        );
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Collision layer/mask set on '${args.nodePath}'.\n\nOutput: ${stdout}`,
+          },
+        ],
+      };
+    } catch (error: any) {
+      return this.createErrorResponse(
+        `Failed to set collision layer/mask: ${error?.message ?? "Unknown error"}`,
+        ["Ensure Godot is installed correctly"],
       );
     }
   }
