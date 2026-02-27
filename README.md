@@ -1,125 +1,111 @@
 # Godot MCP
 
-[![Github-sponsors](https://img.shields.io/badge/sponsor-30363D?style=for-the-badge&logo=GitHub-Sponsors&logoColor=#EA4AAA)](https://github.com/sponsors/Coding-Solo)
-
 [![](https://badge.mcpx.dev?type=server "MCP Server")](https://modelcontextprotocol.io/introduction)
-[![Made with Godot](https://img.shields.io/badge/Made%20with-Godot-478CBF?style=flat&logo=godot%20engine&logoColor=white)](https://godotengine.org)
-[![](https://img.shields.io/badge/Node.js-339933?style=flat&logo=nodedotjs&logoColor=white "Node.js")](https://nodejs.org/en/download/)
+[![Made with Godot](https://img.shields.io/badge/Godot%204.x-478CBF?style=flat&logo=godot%20engine&logoColor=white)](https://godotengine.org)
 [![](https://img.shields.io/badge/TypeScript-3178C6?style=flat&logo=typescript&logoColor=white "TypeScript")](https://www.typescriptlang.org/)
-
-[![](https://img.shields.io/github/last-commit/Coding-Solo/godot-mcp "Last Commit")](https://github.com/Coding-Solo/godot-mcp/commits/main)
-[![](https://img.shields.io/github/stars/Coding-Solo/godot-mcp "Stars")](https://github.com/Coding-Solo/godot-mcp/stargazers)
-[![](https://img.shields.io/github/forks/Coding-Solo/godot-mcp "Forks")](https://github.com/Coding-Solo/godot-mcp/network/members)
 [![](https://img.shields.io/badge/License-MIT-red.svg "MIT License")](https://opensource.org/licenses/MIT)
 
-```text
-                           (((((((             (((((((
-                        (((((((((((           (((((((((((
-                        (((((((((((((       (((((((((((((
-                        (((((((((((((((((((((((((((((((((
-                        (((((((((((((((((((((((((((((((((
-         (((((      (((((((((((((((((((((((((((((((((((((((((      (((((
-       (((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
-     ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
-    ((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
-      (((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
-        (((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
-         (((((((((((@@@@@@@(((((((((((((((((((((((((((@@@@@@@(((((((((((
-         (((((((((@@@@,,,,,@@@(((((((((((((((((((((@@@,,,,,@@@@(((((((((
-         ((((((((@@@,,,,,,,,,@@(((((((@@@@@(((((((@@,,,,,,,,,@@@((((((((
-         ((((((((@@@,,,,,,,,,@@(((((((@@@@@(((((((@@,,,,,,,,,@@@((((((((
-         (((((((((@@@,,,,,,,@@((((((((@@@@@((((((((@@,,,,,,,@@@(((((((((
-         ((((((((((((@@@@@@(((((((((((@@@@@(((((((((((@@@@@@((((((((((((
-         (((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
-         (((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
-         @@@@@@@@@@@@@((((((((((((@@@@@@@@@@@@@((((((((((((@@@@@@@@@@@@@
-         ((((((((( @@@(((((((((((@@(((((((((((@@(((((((((((@@@ (((((((((
-         (((((((((( @@((((((((((@@@(((((((((((@@@((((((((((@@ ((((((((((
-          (((((((((((@@@@@@@@@@@@@@(((((((((((@@@@@@@@@@@@@@(((((((((((
-           (((((((((((((((((((((((((((((((((((((((((((((((((((((((((((
-              (((((((((((((((((((((((((((((((((((((((((((((((((((((
-                 (((((((((((((((((((((((((((((((((((((((((((((((
-                        (((((((((((((((((((((((((((((((((
+A [Model Context Protocol](https://modelcontextprotocol.io/introduction) server that gives AI assistants full control over the Godot game engine. Build scenes, write scripts, run games, send input, capture screenshots, and query game state -- all through MCP tools.
 
+> Fork of [Coding-Solo/godot-mcp](https://github.com/Coding-Solo/godot-mcp), significantly extended with interactive game control, persistent TCP communication, script authoring, and more.
 
-                          /$$      /$$  /$$$$$$  /$$$$$$$
-                         | $$$    /$$$ /$$__  $$| $$__  $$
-                         | $$$$  /$$$$| $$  \__/| $$  \ $$
-                         | $$ $$/$$ $$| $$      | $$$$$$$/
-                         | $$  $$$| $$| $$      | $$____/
-                         | $$\  $ | $$| $$    $$| $$
-                         | $$ \/  | $$|  $$$$$$/| $$
-                         |__/     |__/ \______/ |__/
-```
+## What Can It Do?
 
-A Model Context Protocol (MCP) server for interacting with the Godot game engine.
+This isn't just "launch editor and read logs". The MCP server can **build an entire game from scratch** -- create scenes, add and configure nodes, write GDScript files, wire up signals, set up tilemaps, then **run the game, play it via input commands, and observe the results through screenshots and state queries**.
 
-## Introduction
+### 45 Tools Across 7 Categories
 
-Godot MCP enables AI assistants to launch the Godot editor, run projects, capture debug output, and control project execution - all through a standardized interface.
+**Project & Editor**
+| Tool | Description |
+|------|-------------|
+| `launch_editor` | Open the Godot editor for a project |
+| `run_project` | Run a project in debug mode |
+| `get_debug_output` | Get console output/errors (supports filtering) |
+| `stop_project` | Stop a running project |
+| `get_godot_version` | Get installed Godot version |
+| `list_projects` | Find Godot projects in a directory |
+| `get_project_info` | Analyze project structure |
 
-This direct feedback loop helps AI assistants like Claude understand what works and what doesn't in real Godot projects, leading to better code generation and debugging assistance.
+**Scene Management**
+| Tool | Description |
+|------|-------------|
+| `create_scene` | Create a new scene with a root node type |
+| `add_node` | Add nodes with properties |
+| `remove_node` | Remove nodes from scenes |
+| `rename_node` | Rename a node in a scene |
+| `reparent_node` | Move a node to a different parent |
+| `duplicate_node` | Duplicate a node (optionally to new parent) |
+| `instantiate_scene` | Add a scene as a child instance |
+| `set_node_properties` | Set properties on nodes |
+| `get_node_properties` | Read node properties as JSON |
+| `get_scene_tree` | Get full scene tree structure as JSON |
+| `connect_signal` | Wire signals between nodes |
+| `add_to_group` / `remove_from_group` | Manage node groups |
+| `save_scene` | Save scene (or create variant) |
+| `validate_scene` | Check for missing scripts, broken refs, etc. |
 
-## Features
+**Scripting**
+| Tool | Description |
+|------|-------------|
+| `write_script` | Write or update a GDScript file (auto-creates directories) |
+| `read_script` | Read GDScript file contents |
+| `attach_script` | Attach a script to a node in a scene |
 
-- **Launch Godot Editor**: Open the Godot editor for a specific project
-- **Run Godot Projects**: Execute Godot projects in debug mode
-- **Capture Debug Output**: Retrieve console output and error messages
-- **Control Execution**: Start and stop Godot projects programmatically
-- **Get Godot Version**: Retrieve the installed Godot version
-- **List Godot Projects**: Find Godot projects in a specified directory
-- **Project Analysis**: Get detailed information about project structure
-- **Scene Management**:
-  - Create new scenes with specified root node types
-  - Add nodes to existing scenes with customizable properties
-  - Remove nodes from scenes
-  - Reparent nodes within scenes
-  - Duplicate nodes within scenes
-  - Instantiate scenes as child instances of other scenes
-  - Set properties on existing nodes
-  - Read properties from nodes (JSON output)
-  - Attach scripts to nodes
-  - Read GDScript file contents
-  - Connect signals between nodes
-  - Add/remove nodes to/from groups
-  - Read scene tree structure as JSON
-  - Load sprites and textures into Sprite2D nodes
-  - Set tile cells on TileMapLayer nodes
-  - Read tile data from TileMapLayer nodes
-  - Set custom data layer values on tile cells
-  - Export 3D scenes as MeshLibrary resources for GridMap
-  - Save scenes with options for creating variants
-- **Animation**:
-  - Create AnimationPlayer nodes with pre-configured animations
-  - Add animations with tracks, keyframes, and interpolation settings
-- **Physics**:
-  - Set collision layers and masks (accepts layer numbers or raw bitmask)
-- **Resource Management**:
-  - Create .tres resource files with typed properties
-  - Create TileSet resources with atlas sources and custom data layers
-- **Project Configuration**:
-  - Edit project.godot settings (autoloads, input actions, display, etc.)
-  - Add, remove, or list autoload singletons
-- **Validation & Export**:
-  - Validate scenes for common issues (missing scripts, textures, shapes)
-  - Export projects for target platforms using configured presets
-- **Visual Feedback**:
-  - Capture screenshots of scenes (renders viewport to PNG for AI visual inspection)
-- **UID Management** (for Godot 4.4+):
-  - Get UID for specific files
-  - Update UID references by resaving resources
+**Assets & Resources**
+| Tool | Description |
+|------|-------------|
+| `load_sprite` | Load a texture into a Sprite2D node |
+| `create_resource` | Create .tres resource files with typed properties |
+| `create_tileset` | Create TileSet with atlas sources and custom data layers |
+| `set_cells` | Place tiles on a TileMapLayer |
+| `get_tile_data` | Read tile data from a TileMapLayer |
+| `set_custom_tile_data` | Set custom data on tile cells |
+| `export_mesh_library` | Export 3D scenes as MeshLibrary for GridMap |
+
+**Animation & Physics**
+| Tool | Description |
+|------|-------------|
+| `create_animation_player` | Create AnimationPlayer with pre-configured animations |
+| `add_animation` | Add animations with tracks, keyframes, interpolation |
+| `set_collision_layer_mask` | Set collision layers/masks (layer numbers or bitmask) |
+
+**Project Configuration**
+| Tool | Description |
+|------|-------------|
+| `edit_project_settings` | Edit project.godot (display, input, etc.) |
+| `manage_autoloads` | Add, remove, or list autoload singletons |
+| `list_input_actions` | Discover all input actions defined in a project |
+| `get_uid` / `update_project_uids` | UID management (Godot 4.4+) |
+| `export_project` | Export for target platform using presets |
+
+**Interactive Game Control** (the big one)
+| Tool | Description |
+|------|-------------|
+| `run_interactive` | Start game with injected TCP input receiver |
+| `send_input` | Send input actions to the running game (move, jump, attack...) |
+| `game_state` | Query live game state (HP, score, position, level, etc.) |
+| `game_screenshot` | Capture the live game viewport as PNG |
+| `run_and_capture` | Run game for N seconds, capture screenshot, stop |
+| `capture_screenshot` | Render a scene to PNG (static, no runtime) |
+
+## Interactive Mode
+
+The standout feature. `run_interactive` injects a TCP server into the running game as a temporary autoload. The AI can then:
+
+1. **Send inputs** -- `send_input(action: "move_right")` triggers the same input events as a real keypress
+2. **Query state** -- `game_state()` returns health, score, turn, level, player position, game over status
+3. **Take screenshots** -- `game_screenshot()` captures the live viewport with all runtime rendering
+4. **Play the game** -- chain inputs and state queries to navigate levels, fight enemies, test mechanics
+
+The TCP connection is persistent (single socket reused across commands). Everything is cleaned up automatically when the game stops -- the injected autoload is removed and `project.godot` is restored.
 
 ## Requirements
 
-- [Godot Engine](https://godotengine.org/download) installed on your system
-- Node.js and pnpm
-- An AI assistant that supports MCP (Cline, Cursor, etc.)
+- [Godot Engine](https://godotengine.org/download) 4.x installed on your system
+- Node.js 18+ and pnpm
+- An MCP-compatible AI assistant (Claude Code, Cline, Cursor, etc.)
 
-## Installation and Configuration
-
-### Step 1: Install and Build
-
-First, clone the repository and build the MCP server:
+## Installation
 
 ```bash
 git clone https://github.com/saschb2b/godot-mcp.git
@@ -128,11 +114,24 @@ pnpm install
 pnpm run build
 ```
 
-### Step 2: Configure with Your AI Assistant
+### Configure with Claude Code
 
-#### Option A: Configure with Cline
+Add to your Claude Code MCP settings:
 
-Add to your Cline MCP settings file (`~/Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`):
+```json
+{
+  "mcpServers": {
+    "godot": {
+      "command": "node",
+      "args": ["/absolute/path/to/godot-mcp/build/index.js"]
+    }
+  }
+}
+```
+
+### Configure with Cline
+
+Add to your Cline MCP settings:
 
 ```json
 {
@@ -140,158 +139,45 @@ Add to your Cline MCP settings file (`~/Library/Application Support/Code/User/gl
     "godot": {
       "command": "node",
       "args": ["/absolute/path/to/godot-mcp/build/index.js"],
-      "env": {
-        "DEBUG": "true" // Optional: Enable detailed logging
-      },
-      "disabled": false,
-      "autoApprove": [
-        "launch_editor",
-        "run_project",
-        "get_debug_output",
-        "stop_project",
-        "get_godot_version",
-        "list_projects",
-        "get_project_info",
-        "create_scene",
-        "add_node",
-        "load_sprite",
-        "set_cells",
-        "get_scene_tree",
-        "set_node_properties",
-        "attach_script",
-        "create_resource",
-        "edit_project_settings",
-        "remove_node",
-        "reparent_node",
-        "connect_signal",
-        "get_tile_data",
-        "create_tileset",
-        "export_project",
-        "validate_scene",
-        "export_mesh_library",
-        "save_scene",
-        "get_uid",
-        "update_project_uids",
-        "add_to_group",
-        "remove_from_group",
-        "instantiate_scene",
-        "add_animation",
-        "read_script",
-        "set_custom_tile_data",
-        "duplicate_node",
-        "get_node_properties",
-        "create_animation_player",
-        "manage_autoloads",
-        "set_collision_layer_mask",
-        "capture_screenshot"
-      ]
+      "disabled": false
     }
   }
 }
 ```
 
-#### Option B: Configure with Cursor
+### Configure with Cursor
 
-**Using the Cursor UI:**
+Go to **Settings** > **Features** > **MCP** > **+ Add New MCP Server**:
 
-1. Go to **Cursor Settings** > **Features** > **MCP**
-2. Click on the **+ Add New MCP Server** button
-3. Fill out the form:
-   - Name: `godot` (or any name you prefer)
-   - Type: `command`
-   - Command: `node /absolute/path/to/godot-mcp/build/index.js`
-4. Click "Add"
-5. You may need to press the refresh button in the top right corner of the MCP server card to populate the tool list
+- Name: `godot`
+- Type: `command`
+- Command: `node /absolute/path/to/godot-mcp/build/index.js`
 
-**Using Project-Specific Configuration:**
+### Environment Variables
 
-Create a file at `.cursor/mcp.json` in your project directory with the following content:
+| Variable     | Description                                         |
+| ------------ | --------------------------------------------------- |
+| `GODOT_PATH` | Path to Godot executable (overrides auto-detection) |
+| `DEBUG`      | Set to `"true"` for verbose server logging          |
 
-```json
-{
-  "mcpServers": {
-    "godot": {
-      "command": "node",
-      "args": ["/absolute/path/to/godot-mcp/build/index.js"],
-      "env": {
-        "DEBUG": "true" // Enable detailed logging
-      }
-    }
-  }
-}
-```
+## Architecture
 
-### Step 3: Optional Environment Variables
+The server uses two execution strategies:
 
-You can customize the server behavior with these environment variables:
-
-- `GODOT_PATH`: Path to the Godot executable (overrides automatic detection)
-- `DEBUG`: Set to "true" to enable detailed server-side debug logging
-
-## Example Prompts
-
-Once configured, your AI assistant will automatically run the MCP server when needed. You can use prompts like:
-
-```text
-"Launch the Godot editor for my project at /path/to/project"
-
-"Run my Godot project and show me any errors"
-
-"Get information about my Godot project structure"
-
-"Analyze my Godot project structure and suggest improvements"
-
-"Help me debug this error in my Godot project: [paste error]"
-
-"Write a GDScript for a character controller with double jump and wall sliding"
-
-"Create a new scene with a Player node in my Godot project"
-
-"Add a Sprite2D node to my player scene and load the character texture"
-
-"Set tiles on my TileMapLayer to create a dungeon room layout"
-
-"Export my 3D models as a MeshLibrary for use with GridMap"
-
-"Create a UI scene with buttons and labels for my game's main menu"
-
-"Get the UID for a specific script file in my Godot 4.4 project"
-
-"Update UID references in my Godot project after upgrading to 4.4"
-```
-
-## Implementation Details
-
-### Architecture
-
-The Godot MCP server uses a bundled GDScript approach for complex operations:
-
-1. **Direct Commands**: Simple operations like launching the editor or getting project info use Godot's built-in CLI commands directly.
-2. **Bundled Operations Script**: Complex operations like creating scenes or adding nodes use a single, comprehensive GDScript file (`godot_operations.gd`) that handles all operations.
-
-This architecture provides several benefits:
-
-- **No Temporary Files**: Eliminates the need for temporary script files, keeping your system clean
-- **Simplified Codebase**: Centralizes all Godot operations in one (somewhat) organized file
-- **Better Maintainability**: Makes it easier to add new operations or modify existing ones
-- **Improved Error Handling**: Provides consistent error reporting across all operations
-- **Reduced Overhead**: Minimizes file I/O operations for better performance
-
-The bundled script accepts operation type and parameters as JSON, allowing for flexible and dynamic operation execution without generating temporary files for each operation.
+1. **Direct CLI** -- Simple operations (launch editor, get version, read files) call Godot CLI commands or manipulate files directly from TypeScript.
+2. **Bundled GDScript** -- Complex scene operations use `godot_operations.gd`, a comprehensive script that runs via `godot --headless --script` to manipulate scene trees, nodes, and resources through the Godot API.
+3. **TCP Input Receiver** -- Interactive mode injects `input_receiver.gd` as a temporary autoload that listens on port 9876 for JSON commands (input injection, state queries, viewport capture).
 
 ## Troubleshooting
 
-- **Godot Not Found**: Set the GODOT_PATH environment variable to your Godot executable
-- **Connection Issues**: Ensure the server is running and restart your AI assistant
-- **Invalid Project Path**: Ensure the path points to a directory containing a project.godot file
-- **Build Issues**: Make sure all dependencies are installed by running `pnpm install`
-- **For Cursor Specifically**:
-- Ensure the MCP server shows up and is enabled in Cursor settings (Settings > MCP)
-- MCP tools can only be run using the Agent chat profile (Cursor Pro or Business subscription)
-- Use "Yolo Mode" to automatically run MCP tool requests
+| Problem                         | Solution                                              |
+| ------------------------------- | ----------------------------------------------------- |
+| Godot not found                 | Set `GODOT_PATH` environment variable                 |
+| Connection issues               | Restart your AI assistant to reconnect MCP            |
+| Invalid project path            | Ensure path contains a `project.godot` file           |
+| Interactive mode not responding | Check that port 9876 is not in use by another process |
+| Build errors                    | Run `pnpm install` then `pnpm run build`              |
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/coding-solo-godot-mcp-badge.png)](https://mseep.ai/app/coding-solo-godot-mcp)
+MIT -- see [LICENSE](LICENSE).
