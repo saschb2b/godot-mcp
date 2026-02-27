@@ -47,7 +47,7 @@ You (natural language) --> AI Assistant --> MCP Server --> Godot Engine
                            your request   add_node()     in .tscn file
 ```
 
-You talk to your AI assistant normally. When it needs to do something in Godot, it calls one of the 48 tools this server provides. **You don't write any code yourself** -- the AI handles that.
+You talk to your AI assistant normally. When it needs to do something in Godot, it calls one of the 57 tools this server provides. **You don't write any code yourself** -- the AI handles that.
 
 ## Quickstart
 
@@ -266,7 +266,7 @@ Ask Cline: _"Use the get_godot_version tool"_ -- if it returns a version, the fu
 
 This isn't just "launch editor and read logs". The MCP server can **build an entire game from scratch** -- create scenes, add and configure nodes, write GDScript files, wire up signals, set up tilemaps, then **run the game, play it via input commands, and observe the results through screenshots and state queries**.
 
-### 48 Tools Across 7 Categories
+### 57 Tools Across 8 Categories
 
 **Project & Editor**
 | Tool | Description |
@@ -335,26 +335,41 @@ This isn't just "launch editor and read logs". The MCP server can **build an ent
 | Tool | Description |
 |------|-------------|
 | `run_interactive` | Start game with injected TCP input receiver |
-| `send_input` | Send input actions to the running game (move, jump, attack...) |
+| `send_input` | Send named input actions to the running game (move, jump, attack...) |
+| `send_key` | Send keyboard key events with modifier support (shift, ctrl, alt) |
+| `send_mouse_click` | Send mouse clicks at specific viewport coordinates |
+| `send_mouse_drag` | Simulate mouse drag operations from point A to B |
 | `game_state` | Query live game state (HP, score, position, level, etc.) |
 | `call_method` | Invoke a method on a live node (e.g., `player.take_damage(10)`) |
 | `find_nodes` | Search the runtime scene tree by name pattern and/or type |
 | `evaluate_expression` | Execute arbitrary GDScript expression at runtime and return result |
+| `wait_for_signal` | Block until a signal is emitted (e.g., `animation_finished`) |
+| `wait_for_node` | Block until a node appears in the scene tree |
+| `get_performance_metrics` | Retrieve FPS, draw calls, memory, node count, physics stats |
+| `reset_scene` | Reload the current scene (handy for test loops) |
 | `game_screenshot` | Capture the live game viewport as PNG |
 | `run_and_capture` | Run game for N seconds, capture screenshot, stop |
 | `capture_screenshot` | Render a scene to PNG (static, no runtime) |
+
+**Static Analysis**
+| Tool | Description |
+|------|-------------|
+| `get_scene_insights` | Analyze scene architecture: node types, signals, sub-scenes, groups, depth |
+| `get_node_insights` | Profile a script: methods, signals, dependencies, exports |
 
 ## Interactive Mode
 
 The standout feature. `run_interactive` injects a TCP server into the running game as a temporary autoload. The AI can then:
 
-1. **Send inputs** -- `send_input(action: "move_right")` triggers the same input events as a real keypress
+1. **Send inputs** -- `send_input(action: "move_right")` for named actions, `send_key(key: "space")` for keyboard, `send_mouse_click(x: 100, y: 200)` for mouse
 2. **Query state** -- `game_state()` returns health, score, turn, level, player position, game over status
 3. **Call methods** -- `call_method(nodePath: "Player", method: "take_damage", args: [10])` invokes any method on a live node
 4. **Find nodes** -- `find_nodes(pattern: "Enemy*", typeFilter: "CharacterBody2D")` searches the runtime scene tree
 5. **Evaluate expressions** -- `evaluate_expression(expression: "get_tree().current_scene.name")` runs arbitrary GDScript at runtime
-6. **Take screenshots** -- `game_screenshot()` captures the live viewport with all runtime rendering
-7. **Play the game** -- chain inputs, method calls, and state queries to navigate levels, test mechanics, debug issues
+6. **Wait for events** -- `wait_for_signal(nodePath: "Player", signal: "died")` or `wait_for_node(nodePath: "Player/Sword")` for sequencing
+7. **Monitor performance** -- `get_performance_metrics()` returns FPS, draw calls, memory, node count, physics stats
+8. **Take screenshots** -- `game_screenshot()` captures the live viewport with all runtime rendering
+9. **Reset and replay** -- `reset_scene()` reloads the current scene, chain with inputs to test game loops
 
 The TCP connection is persistent (single socket reused across commands). Everything is cleaned up automatically when the game stops -- the injected autoload is removed and `project.godot` is restored.
 

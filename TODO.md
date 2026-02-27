@@ -88,18 +88,18 @@ Inspired by upstream [PR #72](https://github.com/Coding-Solo/godot-mcp/pull/72).
 
 ### Medium Value
 
-- [ ] **`send_key` / `send_mouse_click` / `send_mouse_drag`** — Granular input simulation (keyboard keys, mouse clicks at coordinates, drag operations). Our `send_input` only supports named actions.
-- [ ] **`wait_for_signal` / `wait_for_node`** — Block until a signal is emitted or a node appears in the tree. Useful for sequencing test steps.
-- [ ] **`get_performance_metrics`** — Retrieve FPS, draw calls, memory usage, etc. via `Performance` singleton. Useful for optimization workflows.
+- [x] **`send_key` / `send_mouse_click` / `send_mouse_drag`** — Granular input simulation (keyboard keys, mouse clicks at coordinates, drag operations). Our `send_input` only supports named actions.
+- [x] **`wait_for_signal` / `wait_for_node`** — Block until a signal is emitted or a node appears in the tree. Useful for sequencing test steps.
+- [x] **`get_performance_metrics`** — Retrieve FPS, draw calls, memory usage, etc. via `Performance` singleton. Useful for optimization workflows.
 
 ### Lower Value
 
-- [ ] **`reset_scene`** — Reload the current scene at runtime. Niche but handy for test loops.
+- [x] **`reset_scene`** — Reload the current scene at runtime. Niche but handy for test loops.
 
 ## Round 8 — Static Analysis
 
-- [ ] **`get_scene_insights`** — Analyze a scene's architecture: signal flows, dependency mapping, component relationships, behavioral patterns. Gives the AI deeper understanding than raw node trees. (Upstream [PR #52](https://github.com/Coding-Solo/godot-mcp/pull/52))
-- [ ] **`get_node_insights`** — Behavioral profiling of scripts: method call classification, signal emission tracking, dependency extraction via preload/load/ClassDB. (Upstream [PR #52](https://github.com/Coding-Solo/godot-mcp/pull/52))
+- [x] **`get_scene_insights`** — Analyze a scene's architecture: signal flows, dependency mapping, component relationships, behavioral patterns. Gives the AI deeper understanding than raw node trees. (Upstream [PR #52](https://github.com/Coding-Solo/godot-mcp/pull/52))
+- [x] **`get_node_insights`** — Behavioral profiling of scripts: method call classification, signal emission tracking, dependency extraction via preload/load/ClassDB. (Upstream [PR #52](https://github.com/Coding-Solo/godot-mcp/pull/52))
 
 ### Future Considerations
 

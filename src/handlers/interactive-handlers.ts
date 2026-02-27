@@ -276,6 +276,204 @@ export async function handleFindNodes(
   }
 }
 
+export async function handleSendKey(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  if (!args?.key) {
+    return createErrorResponse("Missing required parameter: key", [
+      'Provide the key name (e.g., "space", "a", "escape")',
+    ]);
+  }
+
+  try {
+    const response = await sendTcpCommand(ctx, {
+      type: "send_key",
+      key: args.key,
+      pressed: args.pressed !== false,
+      shift: args.shift ?? false,
+      ctrl: args.ctrl ?? false,
+      alt: args.alt ?? false,
+      meta: args.meta ?? false,
+    });
+    return {
+      content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return createErrorResponse(msg, [
+      "Ensure the game is running via run_interactive",
+    ]);
+  }
+}
+
+export async function handleSendMouseClick(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  if (args?.x == null || args?.y == null) {
+    return createErrorResponse("Missing required parameters: x and y", [
+      "Provide the x and y coordinates for the mouse click",
+    ]);
+  }
+
+  try {
+    const response = await sendTcpCommand(ctx, {
+      type: "send_mouse_click",
+      x: args.x,
+      y: args.y,
+      button: args.button ?? "left",
+      double_click: args.doubleClick ?? args.double_click ?? false,
+    });
+    return {
+      content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return createErrorResponse(msg, [
+      "Ensure the game is running via run_interactive",
+    ]);
+  }
+}
+
+export async function handleSendMouseDrag(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  if (args?.fromX == null && args?.from_x == null) {
+    return createErrorResponse(
+      "Missing required parameters: fromX, fromY, toX, toY",
+      ["Provide start and end coordinates for the drag"],
+    );
+  }
+
+  try {
+    const response = await sendTcpCommand(ctx, {
+      type: "send_mouse_drag",
+      from_x: args.fromX ?? args.from_x,
+      from_y: args.fromY ?? args.from_y,
+      to_x: args.toX ?? args.to_x,
+      to_y: args.toY ?? args.to_y,
+      steps: args.steps ?? 10,
+      button: args.button ?? "left",
+    });
+    return {
+      content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return createErrorResponse(msg, [
+      "Ensure the game is running via run_interactive",
+    ]);
+  }
+}
+
+export async function handleWaitForSignal(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  if (!args?.node_path && !args?.nodePath) {
+    return createErrorResponse("Missing required parameter: nodePath", [
+      'Provide the path to the node (e.g., "Player")',
+    ]);
+  }
+  if (!args?.signal) {
+    return createErrorResponse("Missing required parameter: signal", [
+      'Provide the signal name (e.g., "died", "health_changed")',
+    ]);
+  }
+
+  try {
+    const response = await sendTcpCommand(
+      ctx,
+      {
+        type: "wait_for_signal",
+        node_path: args.node_path ?? args.nodePath,
+        signal: args.signal,
+        timeout: args.timeout ?? 5.0,
+      },
+      (args.timeout ?? 5.0) * 1000 + 2000,
+    );
+    return {
+      content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return createErrorResponse(msg, [
+      "Ensure the game is running via run_interactive",
+    ]);
+  }
+}
+
+export async function handleWaitForNode(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  if (!args?.node_path && !args?.nodePath) {
+    return createErrorResponse("Missing required parameter: nodePath", [
+      'Provide the node path to wait for (e.g., "Player/Sword")',
+    ]);
+  }
+
+  try {
+    const response = await sendTcpCommand(
+      ctx,
+      {
+        type: "wait_for_node",
+        node_path: args.node_path ?? args.nodePath,
+        timeout: args.timeout ?? 5.0,
+      },
+      (args.timeout ?? 5.0) * 1000 + 2000,
+    );
+    return {
+      content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return createErrorResponse(msg, [
+      "Ensure the game is running via run_interactive",
+    ]);
+  }
+}
+
+export async function handleGetPerformanceMetrics(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  try {
+    const command: Record<string, unknown> = {
+      type: "get_performance_metrics",
+    };
+    if (args?.metrics) command.metrics = args.metrics;
+
+    const response = await sendTcpCommand(ctx, command);
+    return {
+      content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return createErrorResponse(msg, [
+      "Ensure the game is running via run_interactive",
+    ]);
+  }
+}
+
+export async function handleResetScene(
+  ctx: ServerContext,
+): Promise<ToolResponse> {
+  try {
+    const response = await sendTcpCommand(ctx, { type: "reset_scene" });
+    return {
+      content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return createErrorResponse(msg, [
+      "Ensure the game is running via run_interactive",
+    ]);
+  }
+}
+
 export async function handleGameScreenshot(
   ctx: ServerContext,
   args: any,

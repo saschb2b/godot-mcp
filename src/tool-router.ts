@@ -21,6 +21,7 @@ import * as uidHandlers from "./handlers/uid-handlers.js";
 import * as settingsHandlers from "./handlers/settings-handlers.js";
 import * as interactiveHandlers from "./handlers/interactive-handlers.js";
 import * as screenshotHandlers from "./handlers/screenshot-handlers.js";
+import * as analysisHandlers from "./handlers/analysis-handlers.js";
 
 type HandlerFn = (ctx: ServerContext, args: any) => any;
 
@@ -95,11 +96,22 @@ const HANDLER_MAP: Record<string, HandlerFn> = {
   call_method: interactiveHandlers.handleCallMethod,
   find_nodes: interactiveHandlers.handleFindNodes,
   evaluate_expression: interactiveHandlers.handleEvaluateExpression,
+  send_key: interactiveHandlers.handleSendKey,
+  send_mouse_click: interactiveHandlers.handleSendMouseClick,
+  send_mouse_drag: interactiveHandlers.handleSendMouseDrag,
+  wait_for_signal: interactiveHandlers.handleWaitForSignal,
+  wait_for_node: interactiveHandlers.handleWaitForNode,
+  get_performance_metrics: interactiveHandlers.handleGetPerformanceMetrics,
+  reset_scene: interactiveHandlers.handleResetScene,
   game_screenshot: interactiveHandlers.handleGameScreenshot,
 
   // Screenshots
   capture_screenshot: screenshotHandlers.handleCaptureScreenshot,
   run_and_capture: screenshotHandlers.handleRunAndCapture,
+
+  // Static analysis
+  get_scene_insights: analysisHandlers.handleGetSceneInsights,
+  get_node_insights: analysisHandlers.handleGetNodeInsights,
 };
 
 export function setupToolHandlers(server: Server, ctx: ServerContext): void {

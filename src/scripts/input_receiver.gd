@@ -14,6 +14,13 @@ extends Node
 #   {"type": "find_nodes", "pattern": "Enemy*", "type_filter": "CharacterBody2D"}
 #   {"type": "call_method", "node_path": "Player", "method": "take_damage", "args": [10]}
 #   {"type": "evaluate_expression", "expression": "get_tree().current_scene.name"}
+#   {"type": "send_key", "key": "space", "pressed": true}
+#   {"type": "send_mouse_click", "x": 100, "y": 200, "button": "left"}
+#   {"type": "send_mouse_drag", "from_x": 0, "from_y": 0, "to_x": 100, "to_y": 100}
+#   {"type": "wait_for_signal", "node_path": "Player", "signal": "died", "timeout": 5.0}
+#   {"type": "wait_for_node", "node_path": "Player/Sword", "timeout": 5.0}
+#   {"type": "get_performance_metrics"}
+#   {"type": "reset_scene"}
 
 const PORT := 9876
 
@@ -91,6 +98,20 @@ func _dispatch(json_str: String) -> void:
 			_handle_call_method(data)
 		"evaluate_expression":
 			_handle_evaluate_expression(data)
+		"send_key":
+			_handle_send_key(data)
+		"send_mouse_click":
+			_handle_send_mouse_click(data)
+		"send_mouse_drag":
+			_handle_send_mouse_drag(data)
+		"wait_for_signal":
+			_handle_wait_for_signal(data)
+		"wait_for_node":
+			_handle_wait_for_node(data)
+		"get_performance_metrics":
+			_handle_get_performance_metrics(data)
+		"reset_scene":
+			_handle_reset_scene()
 		_:
 			# Default: treat as input action
 			_handle_input(data)
@@ -215,6 +236,252 @@ func _handle_evaluate_expression(data: Dictionary) -> void:
 		return
 
 	_send_response({"ok": true, "type": "evaluate_expression", "result": _serialize_value(result)})
+
+
+func _handle_send_key(data: Dictionary) -> void:
+	var key_str: String = data.get("key", "")
+	if key_str.is_empty():
+		_send_response({"error": "Missing key"})
+		return
+
+	var keycode := OS.find_keycode_from_string(key_str)
+	if keycode == KEY_NONE:
+		_send_response({"error": "Unknown key: " + key_str})
+		return
+
+	var pressed: bool = data.get("pressed", true)
+	var event := InputEventKey.new()
+	event.keycode = keycode
+	event.physical_keycode = keycode
+	event.pressed = pressed
+	event.shift_pressed = data.get("shift", false)
+	event.ctrl_pressed = data.get("ctrl", false)
+	event.alt_pressed = data.get("alt", false)
+	event.meta_pressed = data.get("meta", false)
+
+	Input.parse_input_event(event)
+	Input.flush_buffered_events()
+	_send_response({"ok": true, "type": "send_key", "key": key_str, "pressed": pressed})
+
+
+func _handle_send_mouse_click(data: Dictionary) -> void:
+	var x: float = data.get("x", 0.0)
+	var y: float = data.get("y", 0.0)
+	var button_str: String = data.get("button", "left")
+	var double_click: bool = data.get("double_click", false)
+
+	var button_index: MouseButton
+	match button_str:
+		"left":
+			button_index = MOUSE_BUTTON_LEFT
+		"right":
+			button_index = MOUSE_BUTTON_RIGHT
+		"middle":
+			button_index = MOUSE_BUTTON_MIDDLE
+		_:
+			_send_response({"error": "Unknown button: " + button_str + ". Use left, right, or middle"})
+			return
+
+	var pos := Vector2(x, y)
+
+	# Press
+	var press := InputEventMouseButton.new()
+	press.position = pos
+	press.global_position = pos
+	press.button_index = button_index
+	press.pressed = true
+	press.double_click = double_click
+	Input.parse_input_event(press)
+
+	# Release
+	var release := InputEventMouseButton.new()
+	release.position = pos
+	release.global_position = pos
+	release.button_index = button_index
+	release.pressed = false
+	Input.parse_input_event(release)
+
+	Input.flush_buffered_events()
+	_send_response({"ok": true, "type": "send_mouse_click", "x": x, "y": y, "button": button_str})
+
+
+func _handle_send_mouse_drag(data: Dictionary) -> void:
+	var from_x: float = data.get("from_x", 0.0)
+	var from_y: float = data.get("from_y", 0.0)
+	var to_x: float = data.get("to_x", 0.0)
+	var to_y: float = data.get("to_y", 0.0)
+	var steps: int = data.get("steps", 10)
+	var button_str: String = data.get("button", "left")
+
+	var button_index: MouseButton
+	match button_str:
+		"left":
+			button_index = MOUSE_BUTTON_LEFT
+		"right":
+			button_index = MOUSE_BUTTON_RIGHT
+		"middle":
+			button_index = MOUSE_BUTTON_MIDDLE
+		_:
+			_send_response({"error": "Unknown button: " + button_str + ". Use left, right, or middle"})
+			return
+
+	var from := Vector2(from_x, from_y)
+	var to := Vector2(to_x, to_y)
+
+	# Press at start
+	var press := InputEventMouseButton.new()
+	press.position = from
+	press.global_position = from
+	press.button_index = button_index
+	press.pressed = true
+	Input.parse_input_event(press)
+
+	# Motion events
+	steps = max(steps, 1)
+	for i in range(steps + 1):
+		var t := float(i) / float(steps)
+		var pos := from.lerp(to, t)
+		var motion := InputEventMouseMotion.new()
+		motion.position = pos
+		motion.global_position = pos
+		motion.button_mask = MOUSE_BUTTON_MASK_LEFT if button_str == "left" else (MOUSE_BUTTON_MASK_RIGHT if button_str == "right" else MOUSE_BUTTON_MASK_MIDDLE)
+		Input.parse_input_event(motion)
+
+	# Release at end
+	var release := InputEventMouseButton.new()
+	release.position = to
+	release.global_position = to
+	release.button_index = button_index
+	release.pressed = false
+	Input.parse_input_event(release)
+
+	Input.flush_buffered_events()
+	_send_response({"ok": true, "type": "send_mouse_drag", "from": str(from), "to": str(to), "steps": steps})
+
+
+func _handle_wait_for_signal(data: Dictionary) -> void:
+	var node_path_str: String = data.get("node_path", "")
+	var signal_name: String = data.get("signal", "")
+	if node_path_str.is_empty() or signal_name.is_empty():
+		_send_response({"error": "Missing node_path or signal"})
+		return
+
+	var timeout: float = data.get("timeout", 5.0)
+
+	var scene := get_tree().current_scene
+	if not scene:
+		_send_response({"error": "No current scene"})
+		return
+
+	var target: Node = scene.get_node_or_null(NodePath(node_path_str))
+	if not target:
+		target = get_node_or_null(NodePath(node_path_str))
+	if not target:
+		_send_response({"error": "Node not found: " + node_path_str})
+		return
+
+	if not target.has_signal(signal_name):
+		_send_response({"error": "Signal not found: " + signal_name + " on " + target.get_class()})
+		return
+
+	var elapsed := 0.0
+	var received := false
+	var cb := func():
+		received = true
+
+	target.connect(signal_name, cb, CONNECT_ONE_SHOT)
+
+	while elapsed < timeout and not received:
+		await get_tree().process_frame
+		elapsed += get_process_delta_time()
+
+	if received:
+		_send_response({"ok": true, "type": "wait_for_signal", "node": node_path_str, "signal": signal_name, "timed_out": false, "elapsed": elapsed})
+	else:
+		if target.is_connected(signal_name, cb):
+			target.disconnect(signal_name, cb)
+		_send_response({"ok": true, "type": "wait_for_signal", "node": node_path_str, "signal": signal_name, "timed_out": true, "elapsed": timeout})
+
+
+func _handle_wait_for_node(data: Dictionary) -> void:
+	var node_path_str: String = data.get("node_path", "")
+	if node_path_str.is_empty():
+		_send_response({"error": "Missing node_path"})
+		return
+
+	var timeout: float = data.get("timeout", 5.0)
+
+	var scene := get_tree().current_scene
+	if not scene:
+		_send_response({"error": "No current scene"})
+		return
+
+	var elapsed := 0.0
+	while elapsed < timeout:
+		var target: Node = scene.get_node_or_null(NodePath(node_path_str))
+		if not target:
+			target = get_node_or_null(NodePath(node_path_str))
+		if target:
+			_send_response({"ok": true, "type": "wait_for_node", "node_path": node_path_str, "found": true, "elapsed": elapsed})
+			return
+		await get_tree().process_frame
+		elapsed += get_process_delta_time()
+
+	_send_response({"ok": true, "type": "wait_for_node", "node_path": node_path_str, "found": false, "elapsed": timeout})
+
+
+func _handle_get_performance_metrics(data: Dictionary) -> void:
+	var metrics := {}
+
+	# Core performance metrics from Performance singleton
+	metrics["fps"] = Performance.get_monitor(Performance.TIME_FPS)
+	metrics["frame_time"] = Performance.get_monitor(Performance.TIME_PROCESS)
+	metrics["physics_time"] = Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS)
+	metrics["navigation_time"] = Performance.get_monitor(Performance.TIME_NAVIGATION_PROCESS)
+
+	# Memory
+	metrics["static_memory"] = Performance.get_monitor(Performance.MEMORY_STATIC)
+	metrics["static_memory_max"] = Performance.get_monitor(Performance.MEMORY_STATIC_MAX)
+
+	# Objects
+	metrics["object_count"] = Performance.get_monitor(Performance.OBJECT_COUNT)
+	metrics["resource_count"] = Performance.get_monitor(Performance.OBJECT_RESOURCE_COUNT)
+	metrics["node_count"] = Performance.get_monitor(Performance.OBJECT_NODE_COUNT)
+	metrics["orphan_node_count"] = Performance.get_monitor(Performance.OBJECT_ORPHAN_NODE_COUNT)
+
+	# Rendering
+	metrics["draw_calls"] = Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)
+	metrics["total_objects"] = Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME)
+	metrics["total_primitives"] = Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME)
+	metrics["video_memory"] = Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED)
+
+	# Physics
+	metrics["active_2d_bodies"] = Performance.get_monitor(Performance.PHYSICS_2D_ACTIVE_OBJECTS)
+	metrics["collision_2d_pairs"] = Performance.get_monitor(Performance.PHYSICS_2D_COLLISION_PAIRS)
+	metrics["active_3d_bodies"] = Performance.get_monitor(Performance.PHYSICS_3D_ACTIVE_OBJECTS)
+	metrics["collision_3d_pairs"] = Performance.get_monitor(Performance.PHYSICS_3D_COLLISION_PAIRS)
+
+	# Filter to requested metrics if specified
+	var requested: Array = data.get("metrics", [])
+	if not requested.is_empty():
+		var filtered := {}
+		for key in requested:
+			if key in metrics:
+				filtered[key] = metrics[key]
+		metrics = filtered
+
+	_send_response({"ok": true, "type": "get_performance_metrics", "metrics": metrics})
+
+
+func _handle_reset_scene() -> void:
+	var scene_name: String = ""
+	if get_tree().current_scene:
+		scene_name = get_tree().current_scene.name
+	var err := get_tree().reload_current_scene()
+	if err != OK:
+		_send_response({"error": "Failed to reload scene: " + str(err)})
+		return
+	_send_response({"ok": true, "type": "reset_scene", "scene": scene_name})
 
 
 func _serialize_value(value: Variant) -> Variant:

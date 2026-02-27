@@ -7,6 +7,13 @@ import {
   handleCallMethod,
   handleFindNodes,
   handleEvaluateExpression,
+  handleSendKey,
+  handleSendMouseClick,
+  handleSendMouseDrag,
+  handleWaitForSignal,
+  handleWaitForNode,
+  handleGetPerformanceMetrics,
+  handleResetScene,
 } from "../../src/handlers/interactive-handlers.js";
 import { initContext } from "../setup.js";
 import { assertError } from "../helpers.js";
@@ -118,6 +125,110 @@ describe("Interactive handlers", () => {
       const res = await handleEvaluateExpression(ctx, {
         expression: "2 + 2",
       });
+      assertError(res);
+      expect(res.content[0]!.text).toContain("run_interactive");
+    });
+  });
+
+  describe("send_key", () => {
+    it("errors on missing key", async () => {
+      const res = await handleSendKey(ctx, {});
+      assertError(res);
+      expect(res.content[0]!.text).toContain("key");
+    });
+
+    it("errors when no game is running", async () => {
+      const res = await handleSendKey(ctx, { key: "space" });
+      assertError(res);
+      expect(res.content[0]!.text).toContain("run_interactive");
+    });
+  });
+
+  describe("send_mouse_click", () => {
+    it("errors on missing coordinates", async () => {
+      const res = await handleSendMouseClick(ctx, {});
+      assertError(res);
+      expect(res.content[0]!.text).toContain("x and y");
+    });
+
+    it("errors when no game is running", async () => {
+      const res = await handleSendMouseClick(ctx, { x: 100, y: 200 });
+      assertError(res);
+      expect(res.content[0]!.text).toContain("run_interactive");
+    });
+  });
+
+  describe("send_mouse_drag", () => {
+    it("errors on missing coordinates", async () => {
+      const res = await handleSendMouseDrag(ctx, {});
+      assertError(res);
+      expect(res.content[0]!.text).toContain("fromX");
+    });
+
+    it("errors when no game is running", async () => {
+      const res = await handleSendMouseDrag(ctx, {
+        fromX: 0,
+        fromY: 0,
+        toX: 100,
+        toY: 100,
+      });
+      assertError(res);
+      expect(res.content[0]!.text).toContain("run_interactive");
+    });
+  });
+
+  describe("wait_for_signal", () => {
+    it("errors on missing nodePath", async () => {
+      const res = await handleWaitForSignal(ctx, { signal: "died" });
+      assertError(res);
+      expect(res.content[0]!.text).toContain("nodePath");
+    });
+
+    it("errors on missing signal", async () => {
+      const res = await handleWaitForSignal(ctx, { nodePath: "Player" });
+      assertError(res);
+      expect(res.content[0]!.text).toContain("signal");
+    });
+
+    it("errors when no game is running", async () => {
+      const res = await handleWaitForSignal(ctx, {
+        nodePath: "Player",
+        signal: "died",
+        timeout: 1,
+      });
+      assertError(res);
+      expect(res.content[0]!.text).toContain("run_interactive");
+    });
+  });
+
+  describe("wait_for_node", () => {
+    it("errors on missing nodePath", async () => {
+      const res = await handleWaitForNode(ctx, {});
+      assertError(res);
+      expect(res.content[0]!.text).toContain("nodePath");
+    });
+
+    it("errors when no game is running", async () => {
+      const res = await handleWaitForNode(ctx, {
+        nodePath: "Player/Sword",
+        timeout: 1,
+      });
+      assertError(res);
+      expect(res.content[0]!.text).toContain("run_interactive");
+    });
+  });
+
+  describe("get_performance_metrics", () => {
+    it("errors when no game is running", async () => {
+      const res = await handleGetPerformanceMetrics(ctx, {});
+      assertError(res);
+      expect(res.content[0]!.text).toContain("run_interactive");
+    });
+  });
+
+  describe("reset_scene", () => {
+    it("errors when no game is running", async () => {
+      const res = await handleResetScene(ctx);
       assertError(res);
       expect(res.content[0]!.text).toContain("run_interactive");
     });

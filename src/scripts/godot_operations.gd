@@ -119,6 +119,10 @@ func _init():
             manage_autoloads(params)
         "set_collision_layer_mask":
             set_collision_layer_mask(params)
+        "get_scene_insights":
+            get_scene_insights(params)
+        "get_node_insights":
+            get_node_insights(params)
         _:
             log_error("Unknown operation: " + operation)
             quit(1)
@@ -2349,3 +2353,224 @@ func set_collision_layer_mask(params):
     if params.has("collision_mask"):
         info += " | mask=" + str(node.collision_mask)
     print(info)
+
+
+# ─── Static Analysis ───────────────────────────────────────────────────
+
+func get_scene_insights(params):
+    var result = _load_scene(params)
+    var scene_root = result[0]
+
+    var insights = {
+        "scene": params.scene_path,
+        "root_type": scene_root.get_class(),
+    }
+
+    # Count nodes by type
+    var type_counts := {}
+    var total_nodes := 0
+    var scripts: Array = []
+    var signals: Array = []
+    var sub_scenes: Array = []
+    var groups_map := {}
+
+    _analyze_scene_recursive(scene_root, scene_root, type_counts, scripts, signals, sub_scenes, groups_map)
+
+    for type_name in type_counts:
+        total_nodes += type_counts[type_name]
+
+    insights["total_nodes"] = total_nodes
+    insights["node_types"] = type_counts
+
+    # Scripts
+    if not scripts.is_empty():
+        insights["scripts"] = scripts
+
+    # Signal connections
+    if not signals.is_empty():
+        insights["signal_connections"] = signals
+
+    # Sub-scene instances
+    if not sub_scenes.is_empty():
+        insights["sub_scenes"] = sub_scenes
+
+    # Groups
+    if not groups_map.is_empty():
+        insights["groups"] = groups_map
+
+    # Depth analysis
+    var max_depth := 0
+    _get_tree_depth(scene_root, 0, max_depth)
+    insights["max_depth"] = max_depth
+
+    print(JSON.stringify(insights, "  "))
+
+
+func _analyze_scene_recursive(node, scene_root, type_counts: Dictionary, scripts: Array, signals_arr: Array, sub_scenes: Array, groups_map: Dictionary) -> void:
+    var node_path := str(scene_root.get_path_to(node))
+    if node_path == ".":
+        node_path = node.name
+
+    # Count by type
+    var type_name: String = node.get_class()
+    type_counts[type_name] = type_counts.get(type_name, 0) + 1
+
+    # Track scripts
+    var script = node.get_script()
+    if script and script.resource_path != "":
+        scripts.append({
+            "node": node_path,
+            "script": script.resource_path,
+            "type": type_name,
+        })
+
+    # Track signal connections
+    for sig in node.get_signal_list():
+        var connections = node.get_signal_connection_list(sig.name)
+        for conn in connections:
+            var target_path := str(scene_root.get_path_to(conn.callable.get_object())) if conn.callable.get_object() is Node else "unknown"
+            signals_arr.append({
+                "source": node_path,
+                "signal": sig.name,
+                "target": target_path,
+                "method": conn.callable.get_method(),
+            })
+
+    # Track sub-scene instances
+    if node.scene_file_path != "" and node != scene_root:
+        sub_scenes.append({
+            "node": node_path,
+            "scene": node.scene_file_path,
+            "type": type_name,
+        })
+
+    # Track groups
+    for g in node.get_groups():
+        var group_name := str(g)
+        if not group_name.begins_with("_"):
+            if not groups_map.has(group_name):
+                groups_map[group_name] = []
+            groups_map[group_name].append(node_path)
+
+    for child in node.get_children():
+        _analyze_scene_recursive(child, scene_root, type_counts, scripts, signals_arr, sub_scenes, groups_map)
+
+
+func _get_tree_depth(node: Node, current_depth: int, max_depth: int) -> int:
+    if current_depth > max_depth:
+        max_depth = current_depth
+    for child in node.get_children():
+        max_depth = _get_tree_depth(child, current_depth + 1, max_depth)
+    return max_depth
+
+
+func get_node_insights(params):
+    var script_path: String = params.script_path
+    if not script_path.begins_with("res://"):
+        script_path = "res://" + script_path
+
+    if not FileAccess.file_exists(script_path):
+        log_error("Script file not found: " + script_path)
+        quit(1)
+
+    var content := FileAccess.get_file_as_string(script_path)
+    var lines := content.split("\n")
+
+    var insights := {
+        "script": params.script_path,
+    }
+
+    # Parse extends
+    for line in lines:
+        var stripped := line.strip_edges()
+        if stripped.begins_with("extends "):
+            insights["extends"] = stripped.substr(8).strip_edges()
+            break
+
+    # Parse class_name
+    for line in lines:
+        var stripped := line.strip_edges()
+        if stripped.begins_with("class_name "):
+            insights["class_name"] = stripped.substr(11).strip_edges()
+            break
+
+    # Categorize methods
+    var lifecycle: Array = []
+    var signal_handlers: Array = []
+    var public_methods: Array = []
+    var private_methods: Array = []
+
+    var lifecycle_names := ["_ready", "_process", "_physics_process", "_input", "_unhandled_input", "_enter_tree", "_exit_tree", "_init", "_notification", "_draw", "_gui_input"]
+
+    for line in lines:
+        var stripped := line.strip_edges()
+        if not stripped.begins_with("func "):
+            continue
+        var func_name := stripped.substr(5)
+        var paren_idx := func_name.find("(")
+        if paren_idx > 0:
+            func_name = func_name.substr(0, paren_idx)
+
+        if func_name in lifecycle_names:
+            lifecycle.append(func_name)
+        elif func_name.begins_with("_on_"):
+            signal_handlers.append(func_name)
+        elif func_name.begins_with("_"):
+            private_methods.append(func_name)
+        else:
+            public_methods.append(func_name)
+
+    var methods := {}
+    if not lifecycle.is_empty():
+        methods["lifecycle"] = lifecycle
+    if not signal_handlers.is_empty():
+        methods["signal_handlers"] = signal_handlers
+    if not public_methods.is_empty():
+        methods["public"] = public_methods
+    if not private_methods.is_empty():
+        methods["private"] = private_methods
+    insights["methods"] = methods
+
+    # Track signal definitions
+    var signal_defs: Array = []
+    for line in lines:
+        var stripped := line.strip_edges()
+        if stripped.begins_with("signal "):
+            signal_defs.append(stripped.substr(7).strip_edges())
+    if not signal_defs.is_empty():
+        insights["signals_defined"] = signal_defs
+
+    # Track signal emissions
+    var emissions: Array = []
+    for line in lines:
+        var stripped := line.strip_edges()
+        if ".emit(" in stripped or "emit_signal(" in stripped:
+            emissions.append(stripped)
+    if not emissions.is_empty():
+        insights["signal_emissions"] = emissions
+
+    # Track dependencies (preload, load)
+    var dependencies: Array = []
+    for line in lines:
+        var stripped := line.strip_edges()
+        if "preload(" in stripped or "load(" in stripped:
+            # Extract the path
+            var start_idx := stripped.find("(\"")
+            var end_idx := stripped.find("\")", start_idx)
+            if start_idx >= 0 and end_idx >= 0:
+                var dep_path := stripped.substr(start_idx + 2, end_idx - start_idx - 2)
+                var dep_type := "preload" if "preload(" in stripped else "load"
+                dependencies.append({"path": dep_path, "type": dep_type})
+    if not dependencies.is_empty():
+        insights["dependencies"] = dependencies
+
+    # Track exported variables
+    var exports: Array = []
+    for line in lines:
+        var stripped := line.strip_edges()
+        if stripped.begins_with("@export"):
+            exports.append(stripped)
+    if not exports.is_empty():
+        insights["exports"] = exports
+
+    print(JSON.stringify(insights, "  "))

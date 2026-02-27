@@ -82,6 +82,7 @@ export function ensureTcpConnection(
 export async function sendTcpCommand(
   ctx: ServerContext,
   command: Record<string, unknown>,
+  timeoutMs = 5000,
   port = 9876,
 ): Promise<Record<string, unknown>> {
   const socket = await ensureTcpConnection(ctx, port);
@@ -96,7 +97,7 @@ export async function sendTcpCommand(
         ctx.tcp.pendingReject = null;
         reject(new Error("TCP command timed out"));
       }
-    }, 5000);
+    }, timeoutMs);
 
     const origResolve = resolve;
     ctx.tcp.pendingResolve = (value) => {

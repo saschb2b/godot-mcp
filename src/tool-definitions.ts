@@ -1328,4 +1328,220 @@ export const TOOL_DEFINITIONS = [
       required: [],
     },
   },
+  {
+    name: "send_key",
+    description:
+      'Send a keyboard key event to a running interactive Godot project via TCP. Supports any key name recognized by Godot (e.g., "space", "a", "escape", "f1") and modifier keys. The project must be running via run_interactive.',
+    inputSchema: {
+      type: "object",
+      properties: {
+        key: {
+          type: "string",
+          description:
+            'The key name (e.g., "space", "a", "escape", "enter", "f1", "up", "down").',
+        },
+        pressed: {
+          type: "boolean",
+          description:
+            "Whether the key is pressed (true) or released (false). Default: true.",
+        },
+        shift: {
+          type: "boolean",
+          description: "Hold Shift modifier. Default: false.",
+        },
+        ctrl: {
+          type: "boolean",
+          description: "Hold Ctrl modifier. Default: false.",
+        },
+        alt: {
+          type: "boolean",
+          description: "Hold Alt modifier. Default: false.",
+        },
+        meta: {
+          type: "boolean",
+          description: "Hold Meta/Windows/Command modifier. Default: false.",
+        },
+      },
+      required: ["key"],
+    },
+  },
+  {
+    name: "send_mouse_click",
+    description:
+      "Send a mouse click at specific coordinates to a running interactive Godot project via TCP. Simulates a full press+release cycle. The project must be running via run_interactive.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        x: {
+          type: "number",
+          description: "X coordinate in viewport pixels.",
+        },
+        y: {
+          type: "number",
+          description: "Y coordinate in viewport pixels.",
+        },
+        button: {
+          type: "string",
+          enum: ["left", "right", "middle"],
+          description: 'Mouse button to click. Default: "left".',
+        },
+        doubleClick: {
+          type: "boolean",
+          description: "Whether this is a double click. Default: false.",
+        },
+      },
+      required: ["x", "y"],
+    },
+  },
+  {
+    name: "send_mouse_drag",
+    description:
+      "Send a mouse drag operation from one position to another in a running interactive Godot project via TCP. Simulates press, intermediate motion events, and release. The project must be running via run_interactive.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        fromX: {
+          type: "number",
+          description: "Starting X coordinate.",
+        },
+        fromY: {
+          type: "number",
+          description: "Starting Y coordinate.",
+        },
+        toX: {
+          type: "number",
+          description: "Ending X coordinate.",
+        },
+        toY: {
+          type: "number",
+          description: "Ending Y coordinate.",
+        },
+        steps: {
+          type: "integer",
+          description:
+            "Number of intermediate motion events (default: 10). Higher = smoother drag.",
+        },
+        button: {
+          type: "string",
+          enum: ["left", "right", "middle"],
+          description: 'Mouse button for the drag. Default: "left".',
+        },
+      },
+      required: ["fromX", "fromY", "toX", "toY"],
+    },
+  },
+  {
+    name: "wait_for_signal",
+    description:
+      'Block until a signal is emitted on a node in the running game. Useful for sequencing test steps (e.g., wait for "animation_finished" or "died"). Returns whether the signal was received or the wait timed out. The project must be running via run_interactive.',
+    inputSchema: {
+      type: "object",
+      properties: {
+        nodePath: {
+          type: "string",
+          description:
+            'Path to the node emitting the signal (e.g., "Player", "AnimationPlayer").',
+        },
+        signal: {
+          type: "string",
+          description:
+            'Name of the signal to wait for (e.g., "died", "animation_finished").',
+        },
+        timeout: {
+          type: "number",
+          description:
+            "Maximum seconds to wait before timing out (default: 5).",
+        },
+      },
+      required: ["nodePath", "signal"],
+    },
+  },
+  {
+    name: "wait_for_node",
+    description:
+      'Block until a node appears in the scene tree. Useful for waiting on dynamically spawned nodes (e.g., wait for "Player/Sword" to appear after equip). Returns whether the node was found or the wait timed out. The project must be running via run_interactive.',
+    inputSchema: {
+      type: "object",
+      properties: {
+        nodePath: {
+          type: "string",
+          description:
+            'Path to the node to wait for (e.g., "Player/Sword", "Enemies/Boss").',
+        },
+        timeout: {
+          type: "number",
+          description:
+            "Maximum seconds to wait before timing out (default: 5).",
+        },
+      },
+      required: ["nodePath"],
+    },
+  },
+  {
+    name: "get_performance_metrics",
+    description:
+      "Retrieve performance metrics from a running interactive Godot project. Returns FPS, frame time, draw calls, memory usage, node count, physics bodies, and more via the Performance singleton. Optionally filter to specific metrics. The project must be running via run_interactive.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        metrics: {
+          type: "array",
+          items: { type: "string" },
+          description:
+            'Optional list of specific metrics to return (e.g., ["fps", "draw_calls", "node_count"]). Default: all metrics.',
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "reset_scene",
+    description:
+      "Reload the current scene in a running interactive Godot project. Useful for resetting game state during test loops. The project must be running via run_interactive.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: "get_scene_insights",
+    description:
+      "Analyze a scene's architecture: node type distribution, signal connections, sub-scene instances, script attachments, group memberships, and tree depth. Gives deeper understanding than raw node trees. Runs via headless Godot (no game needs to be running).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectPath: {
+          type: "string",
+          description: "Path to the Godot project directory.",
+        },
+        scenePath: {
+          type: "string",
+          description:
+            'Path to the scene file (relative to project, e.g., "scenes/main.tscn").',
+        },
+      },
+      required: ["projectPath", "scenePath"],
+    },
+  },
+  {
+    name: "get_node_insights",
+    description:
+      "Analyze a GDScript file: method classification (lifecycle, signal handlers, public, private), signal definitions and emissions, dependencies (preload/load), and exported variables. Gives behavioral understanding of a script. Runs via headless Godot (no game needs to be running).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectPath: {
+          type: "string",
+          description: "Path to the Godot project directory.",
+        },
+        scriptPath: {
+          type: "string",
+          description:
+            'Path to the GDScript file (relative to project, e.g., "scripts/player.gd").',
+        },
+      },
+      required: ["projectPath", "scriptPath"],
+    },
+  },
 ] as const;
