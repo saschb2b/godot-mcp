@@ -6,6 +6,7 @@ import {
   handleGameScreenshot,
   handleCallMethod,
   handleFindNodes,
+  handleEvaluateExpression,
 } from "../../src/handlers/interactive-handlers.js";
 import { initContext } from "../setup.js";
 import { assertError } from "../helpers.js";
@@ -96,6 +97,27 @@ describe("Interactive handlers", () => {
   describe("find_nodes", () => {
     it("errors when no game is running", async () => {
       const res = await handleFindNodes(ctx, { pattern: "Enemy*" });
+      assertError(res);
+      expect(res.content[0]!.text).toContain("run_interactive");
+    });
+  });
+
+  describe("evaluate_expression", () => {
+    it("errors on missing expression", async () => {
+      const res = await handleEvaluateExpression(ctx, {});
+      assertError(res);
+      expect(res.content[0]!.text).toContain("expression");
+    });
+
+    it("errors on empty expression", async () => {
+      const res = await handleEvaluateExpression(ctx, { expression: "" });
+      assertError(res);
+    });
+
+    it("errors when no game is running", async () => {
+      const res = await handleEvaluateExpression(ctx, {
+        expression: "2 + 2",
+      });
       assertError(res);
       expect(res.content[0]!.text).toContain("run_interactive");
     });

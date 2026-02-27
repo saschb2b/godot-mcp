@@ -218,6 +218,37 @@ export async function handleCallMethod(
   }
 }
 
+export async function handleEvaluateExpression(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  if (!args?.expression) {
+    return createErrorResponse("Missing required parameter: expression", [
+      'Provide a GDScript expression to evaluate (e.g., "get_tree().current_scene.name")',
+    ]);
+  }
+
+  try {
+    const response = await sendTcpCommand(ctx, {
+      type: "evaluate_expression",
+      expression: args.expression,
+    });
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(response, null, 2),
+        },
+      ],
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return createErrorResponse(msg, [
+      "Ensure the game is running via run_interactive",
+    ]);
+  }
+}
+
 export async function handleFindNodes(
   ctx: ServerContext,
   args: any,

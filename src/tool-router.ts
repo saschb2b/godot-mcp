@@ -94,6 +94,7 @@ const HANDLER_MAP: Record<string, HandlerFn> = {
   game_state: interactiveHandlers.handleGameState,
   call_method: interactiveHandlers.handleCallMethod,
   find_nodes: interactiveHandlers.handleFindNodes,
+  evaluate_expression: interactiveHandlers.handleEvaluateExpression,
   game_screenshot: interactiveHandlers.handleGameScreenshot,
 
   // Screenshots

@@ -13,6 +13,7 @@ extends Node
 #   {"type": "get_state"}  — returns game node info
 #   {"type": "find_nodes", "pattern": "Enemy*", "type_filter": "CharacterBody2D"}
 #   {"type": "call_method", "node_path": "Player", "method": "take_damage", "args": [10]}
+#   {"type": "evaluate_expression", "expression": "get_tree().current_scene.name"}
 
 const PORT := 9876
 
@@ -88,6 +89,8 @@ func _dispatch(json_str: String) -> void:
 			_handle_find_nodes(data)
 		"call_method":
 			_handle_call_method(data)
+		"evaluate_expression":
+			_handle_evaluate_expression(data)
 		_:
 			# Default: treat as input action
 			_handle_input(data)
@@ -190,6 +193,28 @@ func _handle_call_method(data: Dictionary) -> void:
 	var args: Array = data.get("args", [])
 	var result = target.callv(method_name, args)
 	_send_response({"ok": true, "type": "call_method", "node": node_path_str, "method": method_name, "result": _serialize_value(result)})
+
+
+func _handle_evaluate_expression(data: Dictionary) -> void:
+	var expr_str: String = data.get("expression", "")
+	if expr_str.is_empty():
+		_send_response({"error": "Missing expression"})
+		return
+
+	var expression := Expression.new()
+	var parse_err := expression.parse(expr_str)
+	if parse_err != OK:
+		_send_response({"error": "Parse error: " + expression.get_error_text()})
+		return
+
+	var scene := get_tree().current_scene
+	var base_instance: Object = scene if scene else self
+	var result = expression.execute([], base_instance)
+	if expression.has_execute_failed():
+		_send_response({"error": "Execution error: " + expression.get_error_text()})
+		return
+
+	_send_response({"ok": true, "type": "evaluate_expression", "result": _serialize_value(result)})
 
 
 func _serialize_value(value: Variant) -> Variant:

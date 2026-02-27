@@ -83,7 +83,7 @@ Inspired by upstream [PR #72](https://github.com/Coding-Solo/godot-mcp/pull/72).
 ### High Value
 
 - [x] **`call_method`** — Invoke a method on a live node by path (e.g., `player.take_damage(10)`). Powerful for testing game logic at runtime.
-- [ ] **`evaluate_expression`** — Execute arbitrary GDScript expression at runtime and return the result. Useful for debugging and one-off queries.
+- [x] **`evaluate_expression`** — Execute arbitrary GDScript expression at runtime and return the result. Useful for debugging and one-off queries.
 - [x] **`find_nodes`** — Search the live runtime scene tree by name/type pattern. Useful for verifying spawned entities, finding nodes dynamically.
 
 ### Medium Value

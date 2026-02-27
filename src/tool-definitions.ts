@@ -1297,6 +1297,22 @@ export const TOOL_DEFINITIONS = [
     },
   },
   {
+    name: "evaluate_expression",
+    description:
+      'Execute an arbitrary GDScript expression at runtime and return the result. The expression runs in the context of the current scene (e.g., "get_tree().current_scene.name", "Vector2(1,2).length()"). Useful for debugging, querying state, and one-off calculations. The project must be running via run_interactive.',
+    inputSchema: {
+      type: "object",
+      properties: {
+        expression: {
+          type: "string",
+          description:
+            'The GDScript expression to evaluate (e.g., "get_tree().current_scene.name", "$Player.position", "2 + 2").',
+        },
+      },
+      required: ["expression"],
+    },
+  },
+  {
     name: "game_screenshot",
     description:
       "Capture a screenshot from a running interactive Godot project. Unlike capture_screenshot, this captures the actual live game with all runtime state (procedural content, animations, etc). The project must be running via run_interactive.",
