@@ -1,5 +1,5 @@
 import { chmodSync, copyFileSync, mkdirSync, readdirSync } from "fs";
-import { join, dirname, basename } from "path";
+import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
