@@ -22,6 +22,7 @@ import * as settingsHandlers from "./handlers/settings-handlers.js";
 import * as interactiveHandlers from "./handlers/interactive-handlers.js";
 import * as screenshotHandlers from "./handlers/screenshot-handlers.js";
 import * as analysisHandlers from "./handlers/analysis-handlers.js";
+import * as testHandlers from "./handlers/test-handlers.js";
 
 type HandlerFn = (ctx: ServerContext, args: any) => any;
 
@@ -112,6 +113,9 @@ const HANDLER_MAP: Record<string, HandlerFn> = {
   // Static analysis
   get_scene_insights: analysisHandlers.handleGetSceneInsights,
   get_node_insights: analysisHandlers.handleGetNodeInsights,
+
+  // Testing
+  run_tests: testHandlers.handleRunTests,
 };
 
 export function setupToolHandlers(server: Server, ctx: ServerContext): void {

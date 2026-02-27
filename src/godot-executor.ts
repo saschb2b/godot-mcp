@@ -65,3 +65,34 @@ export async function executeOperation(
     throw error;
   }
 }
+
+/**
+ * Run Godot with arbitrary CLI arguments.
+ * Unlike executeOperation(), this does not assume godot_operations.gd —
+ * the caller builds the full args array. Godot path resolution is centralized here.
+ */
+export async function executeGodotArgs(
+  ctx: ServerContext,
+  args: string[],
+  options?: { timeout?: number },
+): Promise<{ stdout: string; stderr: string }> {
+  const godotPath = await ensureGodotPath(ctx);
+  if (!godotPath) {
+    throw new Error("Could not find a valid Godot executable path");
+  }
+
+  logDebug(ctx.debugMode, `Executing: ${godotPath} ${args.join(" ")}`);
+
+  try {
+    const { stdout, stderr } = await execFileAsync(godotPath, args, {
+      timeout: options?.timeout,
+    });
+    return { stdout, stderr };
+  } catch (error: unknown) {
+    if (error instanceof Error && "stdout" in error && "stderr" in error) {
+      const execError = error as Error & { stdout: string; stderr: string };
+      return { stdout: execError.stdout, stderr: execError.stderr };
+    }
+    throw error;
+  }
+}

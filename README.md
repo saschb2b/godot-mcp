@@ -266,7 +266,7 @@ Ask Cline: _"Use the get_godot_version tool"_ -- if it returns a version, the fu
 
 This isn't just "launch editor and read logs". The MCP server can **build an entire game from scratch** -- create scenes, add and configure nodes, write GDScript files, wire up signals, set up tilemaps, then **run the game, play it via input commands, and observe the results through screenshots and state queries**.
 
-### 57 Tools Across 8 Categories
+### 58 Tools Across 9 Categories
 
 **Project & Editor**
 | Tool | Description |
@@ -356,6 +356,11 @@ This isn't just "launch editor and read logs". The MCP server can **build an ent
 |------|-------------|
 | `get_scene_insights` | Analyze scene architecture: node types, signals, sub-scenes, groups, depth |
 | `get_node_insights` | Profile a script: methods, signals, dependencies, exports |
+
+**Testing**
+| Tool | Description |
+|------|-------------|
+| `run_tests` | Run GUT unit tests headlessly and return pass/fail results |
 
 ## Interactive Mode
 

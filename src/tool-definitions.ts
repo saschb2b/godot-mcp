@@ -1544,4 +1544,54 @@ export const TOOL_DEFINITIONS = [
       required: ["projectPath", "scriptPath"],
     },
   },
+  {
+    name: "run_tests",
+    description:
+      "Run GUT (Godot Unit Testing) tests via headless Godot and return structured results. Requires GUT to be installed in the project (addons/gut/). Returns test summary (pass/fail counts) and full console output.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectPath: {
+          type: "string",
+          description: "Path to the Godot project directory.",
+        },
+        testDir: {
+          type: "string",
+          description:
+            "Test directory (relative to project or res:// path). Default: from .gutconfig.json or res://test.",
+        },
+        testScript: {
+          type: "string",
+          description:
+            "Specific test script to run (e.g., 'test_player.gd'). Omit to run all tests.",
+        },
+        testMethod: {
+          type: "string",
+          description:
+            "Specific test method to run (e.g., 'test_health_decreases'). Most useful with testScript.",
+        },
+        includeSubdirs: {
+          type: "boolean",
+          description:
+            "Search subdirectories for test scripts (default: true).",
+        },
+        configPath: {
+          type: "string",
+          description:
+            "Path to .gutconfig.json (relative to project or res:// path). Uses GUT defaults if omitted.",
+        },
+        logLevel: {
+          type: "integer",
+          description:
+            "GUT log verbosity: 0 (errors only) to 3 (everything). Default: GUT's default.",
+        },
+        timeout: {
+          type: "number",
+          description:
+            "Maximum time in seconds to wait for tests to complete (default: 120).",
+        },
+      },
+      required: ["projectPath"],
+    },
+  },
 ] as const;
