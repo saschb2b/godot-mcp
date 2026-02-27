@@ -180,6 +180,44 @@ export async function handleGameState(
   }
 }
 
+export async function handleCallMethod(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  if (!args?.node_path && !args?.nodePath) {
+    return createErrorResponse("Missing required parameter: nodePath", [
+      'Provide the path to the target node (e.g., "Player")',
+    ]);
+  }
+  if (!args?.method) {
+    return createErrorResponse("Missing required parameter: method", [
+      'Provide the method name to call (e.g., "take_damage")',
+    ]);
+  }
+
+  try {
+    const response = await sendTcpCommand(ctx, {
+      type: "call_method",
+      node_path: args.node_path ?? args.nodePath,
+      method: args.method,
+      args: args.args ?? [],
+    });
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(response, null, 2),
+        },
+      ],
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return createErrorResponse(msg, [
+      "Ensure the game is running via run_interactive",
+    ]);
+  }
+}
+
 export async function handleFindNodes(
   ctx: ServerContext,
   args: any,

@@ -1249,6 +1249,33 @@ export const TOOL_DEFINITIONS = [
     },
   },
   {
+    name: "call_method",
+    description:
+      'Invoke a method on a live node in a running interactive Godot project. Resolves the node by path relative to the current scene (e.g., "Player", "World/Enemies/Boss") and calls the named method with optional arguments. Returns the serialized result. The project must be running via run_interactive.',
+    inputSchema: {
+      type: "object",
+      properties: {
+        nodePath: {
+          type: "string",
+          description:
+            'Path to the target node relative to the current scene root (e.g., "Player", "UI/HealthBar"). Also accepts absolute paths like "/root/GameState".',
+        },
+        method: {
+          type: "string",
+          description:
+            'The method name to call on the node (e.g., "take_damage", "get_health", "set_position").',
+        },
+        args: {
+          type: "array",
+          description:
+            "Arguments to pass to the method. Default: [] (no arguments).",
+          items: {},
+        },
+      },
+      required: ["nodePath", "method"],
+    },
+  },
+  {
     name: "find_nodes",
     description:
       "Search the live runtime scene tree by name pattern and/or type. Returns matching nodes with their path, type, position, and groups. The project must be running via run_interactive.",

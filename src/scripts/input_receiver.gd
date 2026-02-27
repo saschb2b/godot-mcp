@@ -12,6 +12,7 @@ extends Node
 #   {"type": "screenshot", "output_path": "/path/to/file.png"}
 #   {"type": "get_state"}  — returns game node info
 #   {"type": "find_nodes", "pattern": "Enemy*", "type_filter": "CharacterBody2D"}
+#   {"type": "call_method", "node_path": "Player", "method": "take_damage", "args": [10]}
 
 const PORT := 9876
 
@@ -85,6 +86,8 @@ func _dispatch(json_str: String) -> void:
 			_handle_get_state()
 		"find_nodes":
 			_handle_find_nodes(data)
+		"call_method":
+			_handle_call_method(data)
 		_:
 			# Default: treat as input action
 			_handle_input(data)
@@ -158,6 +161,59 @@ func _handle_get_state() -> void:
 			state["player_pos"] = str(player.grid_pos)
 
 	_send_response({"ok": true, "type": "state", "state": state})
+
+
+func _handle_call_method(data: Dictionary) -> void:
+	var node_path_str: String = data.get("node_path", "")
+	var method_name: String = data.get("method", "")
+	if node_path_str.is_empty() or method_name.is_empty():
+		_send_response({"error": "Missing node_path or method"})
+		return
+
+	var scene := get_tree().current_scene
+	if not scene:
+		_send_response({"error": "No current scene"})
+		return
+
+	var target: Node = scene.get_node_or_null(NodePath(node_path_str))
+	if not target:
+		# Also try absolute path from root
+		target = get_node_or_null(NodePath(node_path_str))
+	if not target:
+		_send_response({"error": "Node not found: " + node_path_str})
+		return
+
+	if not target.has_method(method_name):
+		_send_response({"error": "Method not found: " + method_name + " on " + target.get_class()})
+		return
+
+	var args: Array = data.get("args", [])
+	var result = target.callv(method_name, args)
+	_send_response({"ok": true, "type": "call_method", "node": node_path_str, "method": method_name, "result": _serialize_value(result)})
+
+
+func _serialize_value(value: Variant) -> Variant:
+	if value == null:
+		return null
+	if value is bool or value is int or value is float or value is String:
+		return value
+	if value is Vector2 or value is Vector3 or value is Color or value is Rect2:
+		return str(value)
+	if value is Array:
+		var arr: Array = []
+		for item in value:
+			arr.append(_serialize_value(item))
+		return arr
+	if value is Dictionary:
+		var dict := {}
+		for key in value:
+			dict[str(key)] = _serialize_value(value[key])
+		return dict
+	if value is Node:
+		return {"_type": "Node", "name": value.name, "class": value.get_class()}
+	if value is Resource:
+		return {"_type": "Resource", "class": value.get_class(), "path": value.resource_path}
+	return str(value)
 
 
 func _handle_find_nodes(data: Dictionary) -> void:
