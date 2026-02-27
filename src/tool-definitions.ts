@@ -1249,6 +1249,27 @@ export const TOOL_DEFINITIONS = [
     },
   },
   {
+    name: "find_nodes",
+    description:
+      "Search the live runtime scene tree by name pattern and/or type. Returns matching nodes with their path, type, position, and groups. The project must be running via run_interactive.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        pattern: {
+          type: "string",
+          description:
+            'Glob-style name pattern to match (e.g., "Enemy*", "*Spawn*"). Default: "*" (all nodes).',
+        },
+        typeFilter: {
+          type: "string",
+          description:
+            'Filter by Godot class name (e.g., "CharacterBody2D", "Area2D", "Sprite2D"). Uses is_class() so subclasses match too.',
+        },
+      },
+      required: [],
+    },
+  },
+  {
     name: "game_screenshot",
     description:
       "Capture a screenshot from a running interactive Godot project. Unlike capture_screenshot, this captures the actual live game with all runtime state (procedural content, animations, etc). The project must be running via run_interactive.",

@@ -11,6 +11,7 @@ extends Node
 #   {"type": "quit"}
 #   {"type": "screenshot", "output_path": "/path/to/file.png"}
 #   {"type": "get_state"}  — returns game node info
+#   {"type": "find_nodes", "pattern": "Enemy*", "type_filter": "CharacterBody2D"}
 
 const PORT := 9876
 
@@ -82,6 +83,8 @@ func _dispatch(json_str: String) -> void:
 			_handle_screenshot(data)
 		"get_state":
 			_handle_get_state()
+		"find_nodes":
+			_handle_find_nodes(data)
 		_:
 			# Default: treat as input action
 			_handle_input(data)
@@ -155,6 +158,44 @@ func _handle_get_state() -> void:
 			state["player_pos"] = str(player.grid_pos)
 
 	_send_response({"ok": true, "type": "state", "state": state})
+
+
+func _handle_find_nodes(data: Dictionary) -> void:
+	var pattern: String = data.get("pattern", "*")
+	var type_filter: String = data.get("type_filter", "")
+	var results: Array = []
+	var scene := get_tree().current_scene
+	if not scene:
+		_send_response({"ok": true, "type": "find_nodes", "nodes": []})
+		return
+	_find_nodes_recursive(scene, pattern, type_filter, results, "")
+	_send_response({"ok": true, "type": "find_nodes", "count": results.size(), "nodes": results})
+
+
+func _find_nodes_recursive(node: Node, pattern: String, type_filter: String, results: Array, path_prefix: String) -> void:
+	var node_path: String = path_prefix + "/" + node.name if not path_prefix.is_empty() else node.name
+	var name_match := pattern.is_empty() or pattern == "*" or node.name.match(pattern)
+	var type_match := type_filter.is_empty() or node.is_class(type_filter)
+	if name_match and type_match:
+		var info := {
+			"name": node.name,
+			"path": node_path,
+			"type": node.get_class(),
+		}
+		if node is Node2D:
+			info["position"] = str(node.position)
+		elif node is Node3D:
+			info["position"] = str(node.position)
+		if not node.get_groups().is_empty():
+			var groups: Array = []
+			for g in node.get_groups():
+				if not str(g).begins_with("_"):
+					groups.append(str(g))
+			if not groups.is_empty():
+				info["groups"] = groups
+		results.append(info)
+	for child in node.get_children():
+		_find_nodes_recursive(child, pattern, type_filter, results, node_path)
 
 
 func _send_response(data: Dictionary) -> void:

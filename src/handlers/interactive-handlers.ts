@@ -180,6 +180,33 @@ export async function handleGameState(
   }
 }
 
+export async function handleFindNodes(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  try {
+    const command: Record<string, unknown> = { type: "find_nodes" };
+    if (args?.pattern) command.pattern = args.pattern;
+    if (args?.type_filter ?? args?.typeFilter)
+      command.type_filter = args.type_filter ?? args.typeFilter;
+
+    const response = await sendTcpCommand(ctx, command);
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(response, null, 2),
+        },
+      ],
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return createErrorResponse(msg, [
+      "Ensure the game is running via run_interactive",
+    ]);
+  }
+}
+
 export async function handleGameScreenshot(
   ctx: ServerContext,
   args: any,
