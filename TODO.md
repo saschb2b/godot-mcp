@@ -96,7 +96,13 @@ Inspired by upstream [PR #72](https://github.com/Coding-Solo/godot-mcp/pull/72).
 
 - [ ] **`reset_scene`** — Reload the current scene at runtime. Niche but handy for test loops.
 
+## Round 8 — Static Analysis
+
+- [ ] **`get_scene_insights`** — Analyze a scene's architecture: signal flows, dependency mapping, component relationships, behavioral patterns. Gives the AI deeper understanding than raw node trees. (Upstream [PR #52](https://github.com/Coding-Solo/godot-mcp/pull/52))
+- [ ] **`get_node_insights`** — Behavioral profiling of scripts: method call classification, signal emission tracking, dependency extraction via preload/load/ClassDB. (Upstream [PR #52](https://github.com/Coding-Solo/godot-mcp/pull/52))
+
 ### Future Considerations
 
+- [ ] **Multi-instance support** — Run multiple Godot processes with IDs (e.g., "server", "client1", "client2") for multiplayer testing. (Upstream [PR #56](https://github.com/Coding-Solo/godot-mcp/pull/56))
 - [ ] **`run_tests` (GUT support)** — Run GUT (Godot Unit Test) tests via headless Godot and return structured results. Lets the AI write game logic, run tests, and iterate. (Upstream [#29](https://github.com/Coding-Solo/godot-mcp/issues/29))
 - [ ] **Publish to NPM** — Make the fork installable via `npx` / `pnpm dlx`. (Upstream [#61](https://github.com/Coding-Solo/godot-mcp/issues/61))
