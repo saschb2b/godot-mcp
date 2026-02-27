@@ -1,5 +1,6 @@
 import { join, basename } from "path";
 import { existsSync, readdirSync } from "fs";
+import type { ChildProcess } from "child_process";
 import type { OperationParams, ToolResponse } from "./types.js";
 
 export const PARAMETER_MAPPINGS: Record<string, string> = {
@@ -37,6 +38,24 @@ export function logDebug(debugMode: boolean, message: string): void {
   if (debugMode) {
     console.error(`[DEBUG] ${message}`);
   }
+}
+
+/** Kill a child process and wait for it to exit (with a timeout fallback). */
+export function killProcess(proc: ChildProcess, timeoutMs = 3000): Promise<void> {
+  return new Promise((resolve) => {
+    if (!proc.pid || proc.exitCode !== null) {
+      resolve();
+      return;
+    }
+    const timer = setTimeout(() => {
+      resolve();
+    }, timeoutMs);
+    proc.once("exit", () => {
+      clearTimeout(timer);
+      resolve();
+    });
+    proc.kill();
+  });
 }
 
 export function createErrorResponse(

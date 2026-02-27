@@ -5,6 +5,7 @@ import {
   validatePath,
   createErrorResponse,
   logDebug,
+  killProcess,
 } from "../utils.js";
 import { ensureGodotPath } from "../godot-path.js";
 import { join } from "path";
@@ -89,10 +90,10 @@ export async function handleLaunchEditor(
   }
 }
 
-export function handleRunProject(
+export async function handleRunProject(
   ctx: ServerContext,
   args: any,
-): ToolResponse {
+): Promise<ToolResponse> {
   // Normalize parameters to camelCase
   args = normalizeParameters(args);
 
@@ -121,13 +122,14 @@ export function handleRunProject(
       );
     }
 
-    // Kill any existing process
+    // Kill any existing process and wait for it to exit
     if (ctx.activeProcess) {
       logDebug(
         ctx.debugMode,
         "Killing existing Godot process before starting a new one",
       );
-      ctx.activeProcess.process.kill();
+      await killProcess(ctx.activeProcess.process);
+      ctx.activeProcess = null;
     }
 
     const cmdArgs = ["-d", "--path", args.projectPath];
@@ -195,9 +197,9 @@ export function handleRunProject(
   }
 }
 
-export function handleStopProject(
+export async function handleStopProject(
   ctx: ServerContext,
-): ToolResponse {
+): Promise<ToolResponse> {
   if (!ctx.activeProcess) {
     return createErrorResponse("No active Godot process to stop.", [
       "Use run_project to start a Godot project first",
@@ -206,9 +208,9 @@ export function handleStopProject(
   }
 
   logDebug(ctx.debugMode, "Stopping active Godot process");
-  ctx.activeProcess.process.kill();
   const output = ctx.activeProcess.output;
   const errors = ctx.activeProcess.errors;
+  await killProcess(ctx.activeProcess.process);
   ctx.activeProcess = null;
 
   return {

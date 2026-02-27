@@ -45,3 +45,38 @@
 ## Round 3 — Visual Feedback
 
 - [x] **`capture_screenshot`** — Render a scene and capture the viewport as a PNG screenshot for visual feedback.
+
+## Round 4 — Interactive Game Control
+
+- [x] **`run_interactive`** — Run a Godot project with injected TCP input receiver for interactive control.
+- [x] **`send_input`** — Send input actions to a running interactive Godot project via TCP.
+- [x] **`game_state`** — Query runtime game state (health, score, position, etc.) from autoloads.
+- [x] **`game_screenshot`** — Capture a screenshot from a live running game with all runtime state.
+- [x] **`list_input_actions`** — List all input actions defined in a project's project.godot.
+- [x] **`write_script`** — Write or update a GDScript file in a Godot project.
+- [x] **`rename_node`** — Rename a node in a scene while preserving all properties and connections.
+
+## Round 5 — Infrastructure
+
+- [x] **Modular architecture** — Split monolithic index.ts into handlers/, tool-router, tool-definitions, context, types, utils, etc.
+- [x] **Automated tests** — 56 vitest integration tests calling handlers against real Godot + bundled fixture project.
+- [x] **CI test pipeline** — GitHub Actions job with `chickensoft-games/setup-godot` + `xvfb-run` for headless testing.
+
+## Round 6 — Bug Fixes & Improvements
+
+### Bugs
+
+- [x] **Race condition in `run_project` / `stop_project`** — `ctx.activeProcess.process.kill()` now awaits process exit via `killProcess()` helper before spawning a new one. (Upstream [#70](https://github.com/Coding-Solo/godot-mcp/issues/70))
+
+### Already Fixed (upstream still open)
+
+- [x] **JSON parsing errors on Windows** — Fixed by using `execFileAsync` (no shell, args as array) instead of `execAsync`. (Upstream [#49](https://github.com/Coding-Solo/godot-mcp/issues/49), [#20](https://github.com/Coding-Solo/godot-mcp/issues/20))
+- [x] **False success on `add_node` / `create_scene`** — Same root cause as JSON parsing; `execFileAsync` fix resolves this. (Upstream [#55](https://github.com/Coding-Solo/godot-mcp/issues/55))
+- [x] **Path traversal / RCE vulnerability** — `validatePath()` prevents escaping project directory. (Upstream [#64](https://github.com/Coding-Solo/godot-mcp/issues/64))
+- [x] **Interactive game control** — `send_input`, `run_interactive`, `game_state`, `game_screenshot` tools. (Upstream [#68](https://github.com/Coding-Solo/godot-mcp/issues/68))
+- [x] **Script binding & runtime tree** — `attach_script`, `game_state`, `edit_project_settings` cover these needs. (Upstream [#57](https://github.com/Coding-Solo/godot-mcp/issues/57))
+
+### Future Considerations
+
+- [ ] **`run_tests` (GUT support)** — Run GUT (Godot Unit Test) tests via headless Godot and return structured results. Lets the AI write game logic, run tests, and iterate. (Upstream [#29](https://github.com/Coding-Solo/godot-mcp/issues/29))
+- [ ] **Publish to NPM** — Make the fork installable via `npx` / `pnpm dlx`. (Upstream [#61](https://github.com/Coding-Solo/godot-mcp/issues/61))

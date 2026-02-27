@@ -1,6 +1,6 @@
 import type { ServerContext } from "../context.js";
 import type { ToolResponse } from "../types.js";
-import { normalizeParameters, validatePath, createErrorResponse } from "../utils.js";
+import { normalizeParameters, validatePath, createErrorResponse, killProcess } from "../utils.js";
 import { ensureGodotPath } from "../godot-path.js";
 import { sendTcpCommand, cleanupInteractive, disconnectTcp } from "../tcp-client.js";
 import { join, dirname } from "path";
@@ -60,7 +60,7 @@ export async function handleRunInteractive(ctx: ServerContext, args: any): Promi
   // Disconnect any existing TCP connection and kill existing process
   disconnectTcp(ctx);
   if (ctx.activeProcess) {
-    ctx.activeProcess.process.kill();
+    await killProcess(ctx.activeProcess.process);
     ctx.activeProcess = null;
   }
 
