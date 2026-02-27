@@ -47,7 +47,7 @@ You (natural language) --> AI Assistant --> MCP Server --> Godot Engine
                            your request   add_node()     in .tscn file
 ```
 
-You talk to your AI assistant normally. When it needs to do something in Godot, it calls one of the 59 tools this server provides. **You don't write any code yourself** -- the AI handles that.
+You talk to your AI assistant normally. When it needs to do something in Godot, it calls one of the 61 tools this server provides. **You don't write any code yourself** -- the AI handles that.
 
 ## Quickstart
 
@@ -266,7 +266,7 @@ Ask Cline: _"Use the get_godot_version tool"_ -- if it returns a version, the fu
 
 This isn't just "launch editor and read logs". The MCP server can **build an entire game from scratch** -- create scenes, add and configure nodes, write GDScript files, wire up signals, set up tilemaps, then **run the game, play it via input commands, and observe the results through screenshots and state queries**.
 
-### 59 Tools Across 9 Categories
+### 61 Tools Across 15 Categories
 
 **Project & Editor**
 | Tool | Description |
@@ -381,12 +381,64 @@ The TCP connection is persistent (single socket reused across commands). Everyth
 
 ## Environment Variables
 
-| Variable     | Description                                         |
-| ------------ | --------------------------------------------------- |
-| `GODOT_PATH` | Path to Godot executable (overrides auto-detection) |
-| `DEBUG`      | Set to `"true"` for verbose server logging          |
+| Variable            | Description                                                                       |
+| ------------------- | --------------------------------------------------------------------------------- |
+| `GODOT_PATH`        | Path to Godot executable (overrides auto-detection)                               |
+| `DEBUG`             | Set to `"true"` for verbose server logging                                        |
+| `MCP_TOOLSETS`      | Comma-separated tool categories to enable (e.g., `"scene,interactive,analysis"`)  |
+| `MCP_EXCLUDE_TOOLS` | Comma-separated tool names to exclude (e.g., `"export_project,manage_autoloads"`) |
+| `MCP_READ_ONLY`     | Set to `"true"` to block all write operations                                     |
 
 The server tries to auto-detect Godot in common install locations. If it can't find it, set `GODOT_PATH` explicitly.
+
+## Tool Filtering
+
+Reduce token overhead and add safety by controlling which tools are exposed. All three filters can be combined.
+
+### Toolset filtering
+
+Only expose specific categories of tools:
+
+```json
+{
+  "godot": {
+    "command": "node",
+    "args": ["/path/to/godot-mcp/build/index.js"],
+    "env": {
+      "GODOT_PATH": "/path/to/godot",
+      "MCP_TOOLSETS": "scene,node,script,analysis"
+    }
+  }
+}
+```
+
+Available categories: `process`, `project`, `scene`, `node`, `animation`, `tilemap`, `resource`, `script`, `signal_group`, `uid`, `settings`, `interactive`, `screenshot`, `analysis`, `testing`.
+
+### Read-only mode
+
+Block all tools that create, modify, or delete files and game state:
+
+```json
+{
+  "env": {
+    "MCP_READ_ONLY": "true"
+  }
+}
+```
+
+This exposes only tools like `get_scene_tree`, `read_script`, `get_project_info`, `validate_scene`, `run_tests`, `game_state`, `find_nodes`, `get_performance_metrics`, etc.
+
+### Tool exclusion
+
+Remove specific tools by name:
+
+```json
+{
+  "env": {
+    "MCP_EXCLUDE_TOOLS": "export_project,manage_autoloads"
+  }
+}
+```
 
 ## Architecture
 

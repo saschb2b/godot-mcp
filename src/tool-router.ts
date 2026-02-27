@@ -7,7 +7,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import type { ServerContext } from "./context.js";
 import { logDebug } from "./utils.js";
-import { TOOL_DEFINITIONS } from "./tool-definitions.js";
+import { TOOL_DEFINITIONS, type ToolDefinition } from "./tool-definitions.js";
 import * as processHandlers from "./handlers/process-handlers.js";
 import * as projectHandlers from "./handlers/project-handlers.js";
 import * as sceneHandlers from "./handlers/scene-handlers.js";
@@ -119,9 +119,18 @@ const HANDLER_MAP: Record<string, HandlerFn> = {
   run_tests: testHandlers.handleRunTests,
 };
 
+function getActiveTools(ctx: ServerContext): ToolDefinition[] {
+  return TOOL_DEFINITIONS.filter((tool) => {
+    if (ctx.toolsets && !ctx.toolsets.has(tool.category)) return false;
+    if (ctx.excludeTools.has(tool.name)) return false;
+    if (ctx.readOnly && !tool.readOnly) return false;
+    return true;
+  });
+}
+
 export function setupToolHandlers(server: Server, ctx: ServerContext): void {
   server.setRequestHandler(ListToolsRequestSchema, () => ({
-    tools: TOOL_DEFINITIONS,
+    tools: getActiveTools(ctx),
   }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -131,6 +140,15 @@ export function setupToolHandlers(server: Server, ctx: ServerContext): void {
     const handler = HANDLER_MAP[toolName];
     if (!handler) {
       throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${toolName}`);
+    }
+
+    // Verify the tool passes filtering (not excluded/read-only/toolset-filtered)
+    const activeTool = getActiveTools(ctx).find((t) => t.name === toolName);
+    if (!activeTool) {
+      throw new McpError(
+        ErrorCode.MethodNotFound,
+        `Tool "${toolName}" is not available with current configuration`,
+      );
     }
 
     return await handler(ctx, request.params.arguments);

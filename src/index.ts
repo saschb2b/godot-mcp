@@ -27,15 +27,45 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 async function main(config?: GodotServerConfig) {
+  // Merge environment variables into config (config values take precedence)
+  const mergedConfig: GodotServerConfig = { ...config };
+  if (!mergedConfig.toolsets && process.env.MCP_TOOLSETS) {
+    mergedConfig.toolsets = process.env.MCP_TOOLSETS.split(",").map((s) =>
+      s.trim(),
+    );
+  }
+  if (!mergedConfig.excludeTools && process.env.MCP_EXCLUDE_TOOLS) {
+    mergedConfig.excludeTools = process.env.MCP_EXCLUDE_TOOLS.split(",").map(
+      (s) => s.trim(),
+    );
+  }
+  if (mergedConfig.readOnly == null && process.env.MCP_READ_ONLY === "true") {
+    mergedConfig.readOnly = true;
+  }
+
   const operationsScriptPath = join(
     __dirname,
     "scripts",
     "godot_operations.gd",
   );
-  const ctx = new ServerContext(config ?? {}, operationsScriptPath);
+  const ctx = new ServerContext(mergedConfig, operationsScriptPath);
 
   if (ctx.debugMode) {
     console.error(`[DEBUG] Operations script path: ${operationsScriptPath}`);
+  }
+
+  if (ctx.toolsets) {
+    console.error(
+      `[SERVER] Toolset filter active: ${[...ctx.toolsets].join(", ")}`,
+    );
+  }
+  if (ctx.excludeTools.size > 0) {
+    console.error(
+      `[SERVER] Excluded tools: ${[...ctx.excludeTools].join(", ")}`,
+    );
+  }
+  if (ctx.readOnly) {
+    console.error("[SERVER] Read-only mode enabled");
   }
 
   // Handle initial godot path from config

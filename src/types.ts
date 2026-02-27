@@ -12,6 +12,9 @@ export interface GodotServerConfig {
   debugMode?: boolean;
   godotDebugMode?: boolean;
   strictPathValidation?: boolean;
+  toolsets?: string[];
+  excludeTools?: string[];
+  readOnly?: boolean;
 }
 
 export type OperationParams = Record<string, any>;

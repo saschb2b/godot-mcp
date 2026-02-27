@@ -1,6 +1,16 @@
-export const TOOL_DEFINITIONS = [
+export interface ToolDefinition {
+  name: string;
+  category: string;
+  readOnly: boolean;
+  description: string;
+  inputSchema: Record<string, unknown>;
+}
+
+export const TOOL_DEFINITIONS: ToolDefinition[] = [
   {
     name: "launch_editor",
+    category: "process",
+    readOnly: false,
     description: "Launch Godot editor for a specific project",
     inputSchema: {
       type: "object",
@@ -15,6 +25,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "run_project",
+    category: "process",
+    readOnly: false,
     description: "Run the Godot project and capture output",
     inputSchema: {
       type: "object",
@@ -33,6 +45,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "get_debug_output",
+    category: "process",
+    readOnly: true,
     description:
       "Get the current debug output and errors. Supports filtering by errors_only and tail to reduce output size.",
     inputSchema: {
@@ -54,6 +68,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "stop_project",
+    category: "process",
+    readOnly: false,
     description: "Stop the currently running Godot project",
     inputSchema: {
       type: "object",
@@ -63,6 +79,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "get_godot_version",
+    category: "project",
+    readOnly: true,
     description: "Get the installed Godot version",
     inputSchema: {
       type: "object",
@@ -72,6 +90,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "list_projects",
+    category: "project",
+    readOnly: true,
     description: "List Godot projects in a directory",
     inputSchema: {
       type: "object",
@@ -90,6 +110,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "get_project_info",
+    category: "project",
+    readOnly: true,
     description: "Retrieve metadata about a Godot project",
     inputSchema: {
       type: "object",
@@ -104,6 +126,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "create_scene",
+    category: "scene",
+    readOnly: false,
     description: "Create a new Godot scene file",
     inputSchema: {
       type: "object",
@@ -127,6 +151,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "add_node",
+    category: "node",
+    readOnly: false,
     description: "Add a node to an existing scene",
     inputSchema: {
       type: "object",
@@ -162,6 +188,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "load_sprite",
+    category: "resource",
+    readOnly: false,
     description: "Load a sprite into a Sprite2D node",
     inputSchema: {
       type: "object",
@@ -189,6 +217,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "export_mesh_library",
+    category: "resource",
+    readOnly: false,
     description: "Export a scene as a MeshLibrary resource",
     inputSchema: {
       type: "object",
@@ -217,6 +247,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "save_scene",
+    category: "scene",
+    readOnly: false,
     description: "Save changes to a scene file",
     inputSchema: {
       type: "object",
@@ -240,6 +272,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "set_cells",
+    category: "tilemap",
+    readOnly: false,
     description: "Set tile cells on a TileMapLayer node in a scene",
     inputSchema: {
       type: "object",
@@ -278,6 +312,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "get_scene_tree",
+    category: "scene",
+    readOnly: true,
     description:
       "Read a scene's node tree, returning node names, types, properties, and hierarchy as JSON",
     inputSchema: {
@@ -297,6 +333,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "set_node_properties",
+    category: "node",
+    readOnly: false,
     description: "Set properties on an existing node in a scene",
     inputSchema: {
       type: "object",
@@ -325,6 +363,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "attach_script",
+    category: "node",
+    readOnly: false,
     description: "Attach a GDScript file to an existing node in a scene",
     inputSchema: {
       type: "object",
@@ -352,6 +392,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "create_resource",
+    category: "resource",
+    readOnly: false,
     description: "Create a .tres resource file with typed properties",
     inputSchema: {
       type: "object",
@@ -385,6 +427,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "edit_project_settings",
+    category: "settings",
+    readOnly: false,
     description:
       "Modify project.godot settings (autoloads, input actions, display settings, etc.)",
     inputSchema: {
@@ -405,6 +449,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "remove_node",
+    category: "node",
+    readOnly: false,
     description: "Remove a node (and its children) from a scene",
     inputSchema: {
       type: "object",
@@ -427,6 +473,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "reparent_node",
+    category: "node",
+    readOnly: false,
     description: "Move a node to a different parent within the same scene",
     inputSchema: {
       type: "object",
@@ -453,6 +501,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "connect_signal",
+    category: "signal_group",
+    readOnly: false,
     description:
       "Connect a signal from one node to a method on another node in a scene",
     inputSchema: {
@@ -497,6 +547,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "get_tile_data",
+    category: "tilemap",
+    readOnly: true,
     description: "Read existing tile cells from a TileMapLayer node in a scene",
     inputSchema: {
       type: "object",
@@ -520,6 +572,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "create_tileset",
+    category: "tilemap",
+    readOnly: false,
     description:
       "Create a TileSet resource with atlas sources from texture files",
     inputSchema: {
@@ -587,6 +641,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "export_project",
+    category: "settings",
+    readOnly: false,
     description:
       "Export a Godot project for a target platform using a configured export preset",
     inputSchema: {
@@ -615,6 +671,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "validate_scene",
+    category: "scene",
+    readOnly: true,
     description:
       "Validate a scene for common issues (missing scripts, broken references, orphan nodes)",
     inputSchema: {
@@ -634,6 +692,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "get_uid",
+    category: "uid",
+    readOnly: true,
     description:
       "Get the UID for a specific file in a Godot project (for Godot 4.4+)",
     inputSchema: {
@@ -654,6 +714,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "update_project_uids",
+    category: "uid",
+    readOnly: false,
     description:
       "Update UID references in a Godot project by resaving resources (for Godot 4.4+)",
     inputSchema: {
@@ -669,6 +731,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "add_to_group",
+    category: "signal_group",
+    readOnly: false,
     description: "Add a node to one or more groups in a scene",
     inputSchema: {
       type: "object",
@@ -696,6 +760,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "remove_from_group",
+    category: "signal_group",
+    readOnly: false,
     description: "Remove a node from one or more groups in a scene",
     inputSchema: {
       type: "object",
@@ -723,6 +789,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "instantiate_scene",
+    category: "resource",
+    readOnly: false,
     description:
       "Add a scene as a child instance of another scene (e.g., spawn a player scene inside a level)",
     inputSchema: {
@@ -764,6 +832,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "add_animation",
+    category: "animation",
+    readOnly: false,
     description:
       "Add an animation to an existing AnimationPlayer node with tracks and keyframes",
     inputSchema: {
@@ -830,6 +900,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "read_script",
+    category: "script",
+    readOnly: true,
     description: "Read the contents of a GDScript file from a Godot project",
     inputSchema: {
       type: "object",
@@ -848,6 +920,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "write_script",
+    category: "script",
+    readOnly: false,
     description:
       "Write or update a GDScript file in a Godot project. Creates parent directories if needed.",
     inputSchema: {
@@ -872,6 +946,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "set_custom_tile_data",
+    category: "tilemap",
+    readOnly: false,
     description:
       "Set custom data layer values on specific tile cells in a TileMapLayer",
     inputSchema: {
@@ -912,6 +988,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "duplicate_node",
+    category: "node",
+    readOnly: false,
     description:
       "Duplicate a node within a scene, optionally with a new name or different parent",
     inputSchema: {
@@ -944,6 +1022,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "rename_node",
+    category: "node",
+    readOnly: false,
     description:
       "Rename a node in a scene file. Updates the node's name while keeping all properties, children, and connections intact.",
     inputSchema: {
@@ -971,6 +1051,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "get_node_properties",
+    category: "node",
+    readOnly: true,
     description:
       "Read properties from a node in a scene. Returns all non-default properties, or specific ones if listed.",
     inputSchema: {
@@ -997,6 +1079,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "create_animation_player",
+    category: "animation",
+    readOnly: false,
     description:
       "Create an AnimationPlayer node with optional pre-configured animations",
     inputSchema: {
@@ -1059,6 +1143,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "manage_autoloads",
+    category: "settings",
+    readOnly: false,
     description: "Add, remove, or list autoload singletons in project.godot",
     inputSchema: {
       type: "object",
@@ -1087,6 +1173,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "set_collision_layer_mask",
+    category: "node",
+    readOnly: false,
     description:
       "Set collision layer and/or mask on a physics node. Accepts layer numbers (1-32) as array or raw bitmask.",
     inputSchema: {
@@ -1116,6 +1204,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "capture_screenshot",
+    category: "screenshot",
+    readOnly: true,
     description:
       "Capture a screenshot of a Godot scene by rendering it and saving the viewport as a PNG image. Requires a display server (will not work in headless/CI environments). Returns the file path to the saved screenshot, which can be viewed with the Read tool.",
     inputSchema: {
@@ -1156,6 +1246,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "run_and_capture",
+    category: "screenshot",
+    readOnly: true,
     description:
       "Run the Godot project for a specified duration, capture a screenshot, then stop. Useful for automated testing of runtime behavior and procedural content. Requires a display server.",
     inputSchema: {
@@ -1185,6 +1277,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "send_input",
+    category: "interactive",
+    readOnly: false,
     description:
       "Send an input action to a running Godot project via TCP. The project must be running with the MCP input receiver (use run_interactive to start with input support). Supports game actions like move_up, move_down, move_left, move_right, or any custom input action defined in the project.",
     inputSchema: {
@@ -1206,6 +1300,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "list_input_actions",
+    category: "settings",
+    readOnly: true,
     description:
       "List all input actions defined in a Godot project's project.godot file. Useful for discovering available actions before using send_input.",
     inputSchema: {
@@ -1221,6 +1317,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "run_interactive",
+    category: "interactive",
+    readOnly: false,
     description:
       "Run a Godot project with MCP input receiver injected. This starts the game with a TCP server that accepts input commands via the send_input tool, and supports runtime screenshots and state queries. Use this instead of run_project when you want to interact with the game.",
     inputSchema: {
@@ -1240,6 +1338,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "game_state",
+    category: "interactive",
+    readOnly: true,
     description:
       "Get the current game state from a running interactive Godot project. Returns health, score, turn, level, player position, and other state from autoloads. The project must be running via run_interactive.",
     inputSchema: {
@@ -1250,6 +1350,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "call_method",
+    category: "interactive",
+    readOnly: false,
     description:
       'Invoke a method on a live node in a running interactive Godot project. Resolves the node by path relative to the current scene (e.g., "Player", "World/Enemies/Boss") and calls the named method with optional arguments. Returns the serialized result. The project must be running via run_interactive.',
     inputSchema: {
@@ -1277,6 +1379,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "find_nodes",
+    category: "interactive",
+    readOnly: true,
     description:
       "Search the live runtime scene tree by name pattern and/or type. Returns matching nodes with their path, type, position, and groups. The project must be running via run_interactive.",
     inputSchema: {
@@ -1298,6 +1402,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "evaluate_expression",
+    category: "interactive",
+    readOnly: true,
     description:
       'Execute an arbitrary GDScript expression at runtime and return the result. The expression runs in the context of the current scene (e.g., "get_tree().current_scene.name", "Vector2(1,2).length()"). Useful for debugging, querying state, and one-off calculations. The project must be running via run_interactive.',
     inputSchema: {
@@ -1314,6 +1420,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "game_screenshot",
+    category: "interactive",
+    readOnly: true,
     description:
       "Capture a screenshot from a running interactive Godot project. Unlike capture_screenshot, this captures the actual live game with all runtime state (procedural content, animations, etc). The project must be running via run_interactive.",
     inputSchema: {
@@ -1330,6 +1438,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "send_key",
+    category: "interactive",
+    readOnly: false,
     description:
       'Send a keyboard key event to a running interactive Godot project via TCP. Supports any key name recognized by Godot (e.g., "space", "a", "escape", "f1") and modifier keys. The project must be running via run_interactive.',
     inputSchema: {
@@ -1367,6 +1477,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "send_mouse_click",
+    category: "interactive",
+    readOnly: false,
     description:
       "Send a mouse click at specific coordinates to a running interactive Godot project via TCP. Simulates a full press+release cycle. The project must be running via run_interactive.",
     inputSchema: {
@@ -1395,6 +1507,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "send_mouse_drag",
+    category: "interactive",
+    readOnly: false,
     description:
       "Send a mouse drag operation from one position to another in a running interactive Godot project via TCP. Simulates press, intermediate motion events, and release. The project must be running via run_interactive.",
     inputSchema: {
@@ -1432,6 +1546,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "wait_for_signal",
+    category: "interactive",
+    readOnly: true,
     description:
       'Block until a signal is emitted on a node in the running game. Useful for sequencing test steps (e.g., wait for "animation_finished" or "died"). Returns whether the signal was received or the wait timed out. The project must be running via run_interactive.',
     inputSchema: {
@@ -1458,6 +1574,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "wait_for_node",
+    category: "interactive",
+    readOnly: true,
     description:
       'Block until a node appears in the scene tree. Useful for waiting on dynamically spawned nodes (e.g., wait for "Player/Sword" to appear after equip). Returns whether the node was found or the wait timed out. The project must be running via run_interactive.',
     inputSchema: {
@@ -1479,6 +1597,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "get_performance_metrics",
+    category: "interactive",
+    readOnly: true,
     description:
       "Retrieve performance metrics from a running interactive Godot project. Returns FPS, frame time, draw calls, memory usage, node count, physics bodies, and more via the Performance singleton. Optionally filter to specific metrics. The project must be running via run_interactive.",
     inputSchema: {
@@ -1496,6 +1616,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "reset_scene",
+    category: "interactive",
+    readOnly: false,
     description:
       "Reload the current scene in a running interactive Godot project. Useful for resetting game state during test loops. The project must be running via run_interactive.",
     inputSchema: {
@@ -1506,6 +1628,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "get_runtime_errors",
+    category: "interactive",
+    readOnly: true,
     description:
       "Retrieve runtime errors, warnings, and script backtraces captured since the last call. Uses Godot 4.5's Logger API to intercept all engine errors. Returns structured entries with error type, source file/line, and stack traces. By default clears the buffer after reading. Requires Godot 4.5+ and a game running via run_interactive.",
     inputSchema: {
@@ -1522,6 +1646,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "get_scene_insights",
+    category: "analysis",
+    readOnly: true,
     description:
       "Analyze a scene's architecture: node type distribution, signal connections, sub-scene instances, script attachments, group memberships, and tree depth. Gives deeper understanding than raw node trees. Runs via headless Godot (no game needs to be running).",
     inputSchema: {
@@ -1542,6 +1668,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "get_node_insights",
+    category: "analysis",
+    readOnly: true,
     description:
       "Analyze a GDScript file: method classification (lifecycle, signal handlers, public, private), signal definitions and emissions, dependencies (preload/load), and exported variables. Gives behavioral understanding of a script. Runs via headless Godot (no game needs to be running).",
     inputSchema: {
@@ -1562,6 +1690,8 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "run_tests",
+    category: "testing",
+    readOnly: true,
     description:
       "Run GUT (Godot Unit Testing) tests via headless Godot and return structured results. Requires GUT to be installed in the project (addons/gut/). Returns test summary (pass/fail counts) and full console output.",
     inputSchema: {
@@ -1610,4 +1740,4 @@ export const TOOL_DEFINITIONS = [
       required: ["projectPath"],
     },
   },
-] as const;
+];

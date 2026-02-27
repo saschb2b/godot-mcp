@@ -120,6 +120,15 @@ Leverage new engine APIs from [Godot 4.5](https://godotengine.org/releases/4.5/)
 
 - ~~**`bake_shaders`**~~ — Dropped. Shader baking is an export preset option, not a standalone CLI flag. Already covered by `export_project` when the preset has shader baking enabled.
 
+## Round 11 — Tool Filtering & Safety
+
+Inspired by [github/github-mcp-server](https://github.com/github/github-mcp-server).
+
+- [x] **Toolset filtering** — Enable/disable tool categories via `MCP_TOOLSETS` env var (e.g., `"scene,interactive,analysis"`). Reduces token overhead for users who only need a subset of tools.
+- [x] **Read-only mode** — `MCP_READ_ONLY=true` blocks all write/mutating tools. Only read-only tools (get_scene_tree, read_script, game_state, run_tests, etc.) are exposed.
+- [x] **Tool exclusion lists** — `MCP_EXCLUDE_TOOLS` env var to exclude specific tools by name (e.g., `"export_project,manage_autoloads"`).
+- [x] **Tool metadata** — Every tool now has `category` and `readOnly` fields for programmatic filtering.
+
 ### Future Considerations
 
 - [ ] **Multi-instance support** — Run multiple Godot processes with IDs (e.g., "server", "client1", "client2") for multiplayer testing. (Upstream [PR #56](https://github.com/Coding-Solo/godot-mcp/pull/56))
