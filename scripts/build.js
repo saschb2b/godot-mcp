@@ -1,50 +1,24 @@
-import fs from "fs-extra";
-import path from "path";
+import { chmodSync, copyFileSync, mkdirSync, readdirSync } from "fs";
+import { join, dirname, basename } from "path";
 import { fileURLToPath } from "url";
 
-// Get the directory name
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const srcScripts = join(root, "src", "scripts");
+const destScripts = join(root, "build", "scripts");
 
 // Make the build/index.js file executable
-fs.chmodSync(path.join(__dirname, "..", "build", "index.js"), "755");
+chmodSync(join(root, "build", "index.js"), "755");
 
-// Copy the scripts directory to the build directory
+// Copy all .gd files from src/scripts/ to build/scripts/
 try {
-  // Ensure the build/scripts directory exists
-  fs.ensureDirSync(path.join(__dirname, "..", "build", "scripts"));
+  mkdirSync(destScripts, { recursive: true });
 
-  // Copy the godot_operations.gd file
-  fs.copyFileSync(
-    path.join(__dirname, "..", "src", "scripts", "godot_operations.gd"),
-    path.join(__dirname, "..", "build", "scripts", "godot_operations.gd"),
-  );
+  const gdFiles = readdirSync(srcScripts).filter((f) => f.endsWith(".gd"));
 
-  console.log("Successfully copied godot_operations.gd to build/scripts");
-
-  // Copy the capture_screenshot.gd file
-  fs.copyFileSync(
-    path.join(__dirname, "..", "src", "scripts", "capture_screenshot.gd"),
-    path.join(__dirname, "..", "build", "scripts", "capture_screenshot.gd"),
-  );
-
-  console.log("Successfully copied capture_screenshot.gd to build/scripts");
-
-  // Copy the run_and_capture.gd file
-  fs.copyFileSync(
-    path.join(__dirname, "..", "src", "scripts", "run_and_capture.gd"),
-    path.join(__dirname, "..", "build", "scripts", "run_and_capture.gd"),
-  );
-
-  console.log("Successfully copied run_and_capture.gd to build/scripts");
-
-  // Copy the input_receiver.gd file
-  fs.copyFileSync(
-    path.join(__dirname, "..", "src", "scripts", "input_receiver.gd"),
-    path.join(__dirname, "..", "build", "scripts", "input_receiver.gd"),
-  );
-
-  console.log("Successfully copied input_receiver.gd to build/scripts");
+  for (const file of gdFiles) {
+    copyFileSync(join(srcScripts, file), join(destScripts, file));
+    console.log(`Successfully copied ${file} to build/scripts`);
+  }
 } catch (error) {
   console.error("Error copying scripts:", error);
   process.exit(1);
