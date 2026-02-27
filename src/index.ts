@@ -76,6 +76,11 @@ class GodotServer {
   private strictPathValidation = false;
   private interactiveProjectPath: string | null = null;
   private interactiveOriginalProjectGodot: string | null = null;
+  private tcpSocket: net.Socket | null = null;
+  private tcpBuffer = "";
+  private tcpPendingResolve: ((value: Record<string, unknown>) => void) | null =
+    null;
+  private tcpPendingReject: ((reason: Error) => void) | null = null;
 
   /**
    * Parameter name mappings between snake_case and camelCase
@@ -1590,6 +1595,30 @@ class GodotServer {
           },
         },
         {
+          name: "write_script",
+          description:
+            "Write or update a GDScript file in a Godot project. Creates parent directories if needed.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              projectPath: {
+                type: "string",
+                description: "Path to the Godot project directory",
+              },
+              scriptPath: {
+                type: "string",
+                description:
+                  'Path to the script file (relative to project, e.g., "scripts/player.gd")',
+              },
+              content: {
+                type: "string",
+                description: "The GDScript source code to write",
+              },
+            },
+            required: ["projectPath", "scriptPath", "content"],
+          },
+        },
+        {
           name: "set_custom_tile_data",
           description:
             "Set custom data layer values on specific tile cells in a TileMapLayer",
@@ -1659,6 +1688,34 @@ class GodotServer {
               },
             },
             required: ["projectPath", "scenePath", "nodePath"],
+          },
+        },
+        {
+          name: "rename_node",
+          description:
+            "Rename a node in a scene file. Updates the node's name while keeping all properties, children, and connections intact.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              projectPath: {
+                type: "string",
+                description: "Path to the Godot project directory",
+              },
+              scenePath: {
+                type: "string",
+                description: "Path to the scene file (relative to project)",
+              },
+              nodePath: {
+                type: "string",
+                description:
+                  'Path to the node to rename (e.g., "root/OldName")',
+              },
+              newName: {
+                type: "string",
+                description: "The new name for the node",
+              },
+            },
+            required: ["projectPath", "scenePath", "nodePath", "newName"],
           },
         },
         {
@@ -1900,6 +1957,21 @@ class GodotServer {
           },
         },
         {
+          name: "list_input_actions",
+          description:
+            "List all input actions defined in a Godot project's project.godot file. Useful for discovering available actions before using send_input.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              projectPath: {
+                type: "string",
+                description: "Path to the Godot project directory",
+              },
+            },
+            required: ["projectPath"],
+          },
+        },
+        {
           name: "run_interactive",
           description:
             "Run a Godot project with MCP input receiver injected. This starts the game with a TCP server that accepts input commands via the send_input tool, and supports runtime screenshots and state queries. Use this instead of run_project when you want to interact with the game.",
@@ -1938,7 +2010,7 @@ class GodotServer {
               outputPath: {
                 type: "string",
                 description:
-                  'Path where the screenshot PNG will be saved. Defaults to project screenshots/capture.png.',
+                  "Path where the screenshot PNG will be saved. Defaults to project screenshots/capture.png.",
               },
             },
             required: [],
@@ -2015,6 +2087,12 @@ class GodotServer {
           return await this.handleAddAnimation(request.params.arguments);
         case "read_script":
           return await this.handleReadScript(request.params.arguments);
+        case "write_script":
+          return this.handleWriteScript(request.params.arguments);
+        case "rename_node":
+          return await this.handleRenameNode(request.params.arguments);
+        case "list_input_actions":
+          return this.handleListInputActions(request.params.arguments);
         case "set_custom_tile_data":
           return await this.handleSetCustomTileData(request.params.arguments);
         case "duplicate_node":
@@ -4632,6 +4710,226 @@ class GodotServer {
   }
 
   /**
+   * Handle the write_script tool — write GDScript content to a file.
+   */
+  private handleWriteScript(args: any) {
+    args = this.normalizeParameters(args);
+
+    if (!args.projectPath || !args.scriptPath || args.content === undefined) {
+      return this.createErrorResponse("Missing required parameters", [
+        "Provide projectPath, scriptPath, and content",
+      ]);
+    }
+
+    if (
+      !this.validatePath(args.projectPath) ||
+      !this.validatePath(args.scriptPath)
+    ) {
+      return this.createErrorResponse("Invalid path", [
+        'Provide valid paths without ".."',
+      ]);
+    }
+
+    try {
+      const projectFile = join(args.projectPath, "project.godot");
+      if (!existsSync(projectFile)) {
+        return this.createErrorResponse(
+          `Not a valid Godot project: ${args.projectPath}`,
+          ["Ensure the path contains a project.godot file"],
+        );
+      }
+
+      const scriptFile = join(args.projectPath, args.scriptPath);
+      const scriptDir = dirname(scriptFile);
+
+      // Create parent directories if needed
+      if (!existsSync(scriptDir)) {
+        mkdirSync(scriptDir, { recursive: true });
+      }
+
+      const existed = existsSync(scriptFile);
+      writeFileSync(scriptFile, args.content, "utf-8");
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Script ${existed ? "updated" : "created"}: ${args.scriptPath}`,
+          },
+        ],
+      };
+    } catch (error: any) {
+      return this.createErrorResponse(
+        `Failed to write script: ${error?.message ?? "Unknown error"}`,
+        [],
+      );
+    }
+  }
+
+  /**
+   * Handle rename_node — rename a node in a scene via the GDScript operations script.
+   */
+  private async handleRenameNode(args: any) {
+    args = this.normalizeParameters(args);
+
+    if (
+      !args.projectPath ||
+      !args.scenePath ||
+      !args.nodePath ||
+      !args.newName
+    ) {
+      return this.createErrorResponse("Missing required parameters", [
+        "Provide projectPath, scenePath, nodePath, and newName",
+      ]);
+    }
+
+    if (
+      !this.validatePath(args.projectPath) ||
+      !this.validatePath(args.scenePath)
+    ) {
+      return this.createErrorResponse("Invalid path", [
+        'Provide valid paths without ".."',
+      ]);
+    }
+
+    try {
+      const params = {
+        scenePath: args.scenePath,
+        nodePath: args.nodePath,
+        newName: args.newName,
+      };
+      const { stdout, stderr } = await this.executeOperation(
+        "rename_node",
+        params,
+        args.projectPath,
+      );
+
+      if (stderr && (stderr.includes("ERROR") || stderr.includes("printerr"))) {
+        return this.createErrorResponse(`Failed to rename node: ${stderr}`, [
+          "Ensure the node path is correct",
+        ]);
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: stdout || `Node renamed to '${args.newName}'`,
+          },
+        ],
+      };
+    } catch (error: any) {
+      return this.createErrorResponse(
+        `Failed to rename node: ${error?.message ?? "Unknown error"}`,
+        ["Ensure Godot is installed correctly"],
+      );
+    }
+  }
+
+  /**
+   * Handle list_input_actions — parse project.godot for input action definitions.
+   */
+  private handleListInputActions(args: any) {
+    args = this.normalizeParameters(args);
+
+    if (!args.projectPath) {
+      return this.createErrorResponse(
+        "Missing required parameter: projectPath",
+        ["Provide the path to the Godot project directory"],
+      );
+    }
+
+    try {
+      const projectFile = join(args.projectPath, "project.godot");
+      if (!existsSync(projectFile)) {
+        return this.createErrorResponse(
+          `Not a valid Godot project: ${args.projectPath}`,
+          ["Ensure the path contains a project.godot file"],
+        );
+      }
+
+      const content = readFileSync(projectFile, "utf-8");
+      const actions: Record<string, string[]> = {};
+
+      // Input actions are in the [input] section as:
+      // action_name={...events=[...]}
+      const inputMatch = /\[input\]\s*\n([\s\S]*?)(?=\n\[|$)/.exec(content);
+      if (!inputMatch) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "No custom input actions found in project.godot.\nThe project may only use Godot's built-in actions (ui_accept, ui_cancel, etc.).",
+            },
+          ],
+        };
+      }
+
+      const inputSection = inputMatch[1]!;
+      const actionRegex = /^(\w+)=\{[^}]*"events":\s*\[([\s\S]*?)\]\s*\}/gm;
+      let match;
+      while ((match = actionRegex.exec(inputSection)) !== null) {
+        const actionName = match[1]!;
+        const eventsStr = match[2]!;
+        const keys: string[] = [];
+
+        // Extract physical key names from InputEventKey entries
+        const keyMatches = eventsStr.matchAll(/"keycode":\s*(\d+)/g);
+        for (const km of keyMatches) {
+          keys.push(`keycode:${km[1]}`);
+        }
+        const physMatches = eventsStr.matchAll(/"physical_keycode":\s*(\d+)/g);
+        for (const pm of physMatches) {
+          keys.push(`physical:${pm[1]}`);
+        }
+
+        actions[actionName] = keys.length > 0 ? keys : ["(see project.godot)"];
+      }
+
+      // Also try the simpler Godot 4 format: action_name={...}
+      // Some projects use a flat key=value format
+      const simpleRegex = /^(\w+)=/gm;
+      let simpleMatch;
+      while ((simpleMatch = simpleRegex.exec(inputSection)) !== null) {
+        const name = simpleMatch[1]!;
+        if (!(name in actions)) {
+          actions[name] = ["(see project.godot)"];
+        }
+      }
+
+      const actionNames = Object.keys(actions);
+      if (actionNames.length === 0) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "No custom input actions found in [input] section.",
+            },
+          ],
+        };
+      }
+
+      const lines = actionNames.map(
+        (name) => `  ${name}: ${actions[name]!.join(", ")}`,
+      );
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Found ${actionNames.length} input action(s):\n${lines.join("\n")}`,
+          },
+        ],
+      };
+    } catch (error: any) {
+      return this.createErrorResponse(
+        `Failed to list input actions: ${error?.message ?? "Unknown error"}`,
+        [],
+      );
+    }
+  }
+
+  /**
    * Handle the set_custom_tile_data tool
    */
   private async handleSetCustomTileData(args: any) {
@@ -5314,9 +5612,10 @@ class GodotServer {
     args = this.normalizeParameters(args);
 
     if (!args.projectPath) {
-      return this.createErrorResponse("Missing required parameter: projectPath", [
-        "Provide the path to the Godot project directory",
-      ]);
+      return this.createErrorResponse(
+        "Missing required parameter: projectPath",
+        ["Provide the path to the Godot project directory"],
+      );
     }
 
     if (!this.validatePath(args.projectPath)) {
@@ -5335,7 +5634,7 @@ class GodotServer {
 
     const duration = typeof args.duration === "number" ? args.duration : 3;
     const outputPath =
-      args.outputPath || join(args.projectPath, "screenshots", "capture.png");
+      args.outputPath ?? join(args.projectPath, "screenshots", "capture.png");
 
     // Ensure output directory exists
     const outputDir = dirname(outputPath);
@@ -5374,13 +5673,14 @@ class GodotServer {
       );
     } else {
       modifiedContent =
-        projectContent + `\n[autoload]\n\n_McpCapture="*res://${scriptFilename}"\n`;
+        projectContent +
+        `\n[autoload]\n\n_McpCapture="*res://${scriptFilename}"\n`;
     }
     writeFileSync(projectFile, modifiedContent);
 
     try {
       // Run the project (NOT headless — needs rendering)
-      const timeout = (duration + 15) * 1000; // duration + 15s buffer
+      const timeout = (Number(duration) + 15) * 1000; // duration + 15s buffer
       const { stdout, stderr } = await execFileAsync(
         this.godotPath!,
         ["--path", args.projectPath],
@@ -5401,13 +5701,10 @@ class GodotServer {
       }
 
       if (stderr.includes("[ERROR]")) {
-        return this.createErrorResponse(
-          `run_and_capture failed: ${stderr}`,
-          [
-            "Check if the project runs without errors",
-            "Ensure a display server is available",
-          ],
-        );
+        return this.createErrorResponse(`run_and_capture failed: ${stderr}`, [
+          "Check if the project runs without errors",
+          "Ensure a display server is available",
+        ]);
       }
 
       return {
@@ -5473,43 +5770,77 @@ class GodotServer {
 
       try {
         if (existsSync(scriptDest)) unlinkSync(scriptDest);
-      } catch { /* ignore cleanup errors */ }
+      } catch {
+        /* ignore cleanup errors */
+      }
 
       try {
         if (existsSync(configPath)) unlinkSync(configPath);
-      } catch { /* ignore cleanup errors */ }
+      } catch {
+        /* ignore cleanup errors */
+      }
     }
   }
 
   /**
-   * Send a TCP command to the input receiver running inside Godot
-   * and return the JSON response.
+   * Ensure a persistent TCP connection to the input receiver is established.
+   * Reuses existing connection if still alive.
    */
-  private sendTcpCommand(
-    command: Record<string, unknown>,
-    port = 9876,
-  ): Promise<Record<string, unknown>> {
+  private ensureTcpConnection(port = 9876): Promise<net.Socket> {
     return new Promise((resolve, reject) => {
-      const client = net.createConnection(port, "127.0.0.1", () => {
-        client.write(JSON.stringify(command) + "\n");
+      if (
+        this.tcpSocket &&
+        !this.tcpSocket.destroyed &&
+        this.tcpSocket.writable
+      ) {
+        resolve(this.tcpSocket);
+        return;
+      }
+
+      // Clean up old socket state
+      this.tcpSocket = null;
+      this.tcpBuffer = "";
+
+      const socket = net.createConnection(port, "127.0.0.1", () => {
+        this.tcpSocket = socket;
+        resolve(socket);
       });
 
-      let buffer = "";
-      client.on("data", (data) => {
-        buffer += data.toString();
-        if (buffer.includes("\n")) {
-          try {
-            const response = JSON.parse(buffer.trim());
-            client.destroy();
-            resolve(response as Record<string, unknown>);
-          } catch {
-            client.destroy();
-            reject(new Error("Invalid JSON response from Godot"));
+      socket.on("data", (data) => {
+        this.tcpBuffer += data.toString();
+        while (this.tcpBuffer.includes("\n")) {
+          const newlineIdx = this.tcpBuffer.indexOf("\n");
+          const line = this.tcpBuffer.substring(0, newlineIdx).trim();
+          this.tcpBuffer = this.tcpBuffer.substring(newlineIdx + 1);
+          if (line && this.tcpPendingResolve) {
+            try {
+              const response = JSON.parse(line);
+              const resolve = this.tcpPendingResolve;
+              this.tcpPendingResolve = null;
+              this.tcpPendingReject = null;
+              resolve(response as Record<string, unknown>);
+            } catch {
+              const reject = this.tcpPendingReject;
+              this.tcpPendingResolve = null;
+              this.tcpPendingReject = null;
+              reject?.(new Error("Invalid JSON response from Godot"));
+            }
           }
         }
       });
 
-      client.on("error", (err) => {
+      socket.on("error", (err) => {
+        this.tcpSocket = null;
+        if (this.tcpPendingReject) {
+          const rej = this.tcpPendingReject;
+          this.tcpPendingResolve = null;
+          this.tcpPendingReject = null;
+          rej(
+            new Error(
+              `TCP connection error: ${err.message}. Is the game running via run_interactive?`,
+            ),
+          );
+        }
         reject(
           new Error(
             `Cannot connect to Godot input receiver: ${err.message}. Is the game running via run_interactive?`,
@@ -5517,11 +5848,67 @@ class GodotServer {
         );
       });
 
-      setTimeout(() => {
-        client.destroy();
-        reject(new Error("TCP command timed out"));
-      }, 5000);
+      socket.on("close", () => {
+        this.tcpSocket = null;
+        if (this.tcpPendingReject) {
+          const rej = this.tcpPendingReject;
+          this.tcpPendingResolve = null;
+          this.tcpPendingReject = null;
+          rej(new Error("TCP connection closed by Godot"));
+        }
+      });
     });
+  }
+
+  /**
+   * Send a TCP command to the input receiver running inside Godot
+   * and return the JSON response. Uses a persistent connection.
+   */
+  private async sendTcpCommand(
+    command: Record<string, unknown>,
+    port = 9876,
+  ): Promise<Record<string, unknown>> {
+    const socket = await this.ensureTcpConnection(port);
+
+    return new Promise((resolve, reject) => {
+      this.tcpPendingResolve = resolve;
+      this.tcpPendingReject = reject;
+
+      const timeout = setTimeout(() => {
+        if (this.tcpPendingReject) {
+          this.tcpPendingResolve = null;
+          this.tcpPendingReject = null;
+          reject(new Error("TCP command timed out"));
+        }
+      }, 5000);
+
+      // Clear timeout when resolved
+      const origResolve = resolve;
+      this.tcpPendingResolve = (value) => {
+        clearTimeout(timeout);
+        origResolve(value);
+      };
+      const origReject = reject;
+      this.tcpPendingReject = (reason) => {
+        clearTimeout(timeout);
+        origReject(reason);
+      };
+
+      socket.write(JSON.stringify(command) + "\n");
+    });
+  }
+
+  /**
+   * Disconnect the persistent TCP socket if open.
+   */
+  private disconnectTcp() {
+    if (this.tcpSocket && !this.tcpSocket.destroyed) {
+      this.tcpSocket.destroy();
+    }
+    this.tcpSocket = null;
+    this.tcpBuffer = "";
+    this.tcpPendingResolve = null;
+    this.tcpPendingReject = null;
   }
 
   /**
@@ -5531,9 +5918,10 @@ class GodotServer {
     args = this.normalizeParameters(args);
 
     if (!args.projectPath) {
-      return this.createErrorResponse("Missing required parameter: projectPath", [
-        "Provide the path to the Godot project directory",
-      ]);
+      return this.createErrorResponse(
+        "Missing required parameter: projectPath",
+        ["Provide the path to the Godot project directory"],
+      );
     }
 
     const projectFile = join(args.projectPath, "project.godot");
@@ -5572,7 +5960,8 @@ class GodotServer {
     }
     writeFileSync(projectFile, modifiedContent);
 
-    // Kill existing process
+    // Disconnect any existing TCP connection and kill existing process
+    this.disconnectTcp();
     if (this.activeProcess) {
       this.activeProcess.process.kill();
       this.activeProcess = null;
@@ -5632,6 +6021,9 @@ class GodotServer {
    * Clean up interactive mode files.
    */
   private cleanupInteractive() {
+    // Disconnect persistent TCP socket first
+    this.disconnectTcp();
+
     if (!this.interactiveProjectPath) return;
 
     try {
@@ -5714,7 +6106,7 @@ class GodotServer {
    */
   private async handleGameScreenshot(args: any) {
     const outputPath =
-      args?.outputPath ||
+      args?.outputPath ??
       (this.interactiveProjectPath
         ? join(this.interactiveProjectPath, "screenshots", "capture.png")
         : "capture.png");

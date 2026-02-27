@@ -109,6 +109,8 @@ func _init():
             set_custom_tile_data(params)
         "duplicate_node":
             duplicate_node_op(params)
+        "rename_node":
+            rename_node(params)
         "get_node_properties":
             get_node_properties(params)
         "create_animation_player":
@@ -1213,6 +1215,30 @@ func _set_owner_recursive(node, owner):
     for child in node.get_children():
         child.owner = owner
         _set_owner_recursive(child, owner)
+
+# Rename a node in a scene
+func rename_node(params):
+    var result = _load_scene(params)
+    var scene_root = result[0]
+    var absolute_scene_path = result[2]
+
+    var node_path = params.node_path
+    var new_name = params.new_name
+
+    if node_path == "root" or node_path == "":
+        # Rename the root node
+        var old_name = scene_root.name
+        scene_root.name = new_name
+        _save_scene(scene_root, absolute_scene_path)
+        print("Root node renamed from '" + old_name + "' to '" + new_name + "'")
+        return
+
+    var node = _find_node(scene_root, node_path)
+    var old_name = node.name
+    node.name = new_name
+
+    _save_scene(scene_root, absolute_scene_path)
+    print("Node renamed from '" + old_name + "' to '" + new_name + "'")
 
 # Connect a signal between nodes
 func connect_signal_op(params):
