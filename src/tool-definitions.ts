@@ -146,8 +146,7 @@ export const TOOL_DEFINITIONS = [
         },
         nodeType: {
           type: "string",
-          description:
-            "Type of node to add (e.g., Sprite2D, CollisionShape2D)",
+          description: "Type of node to add (e.g., Sprite2D, CollisionShape2D)",
         },
         nodeName: {
           type: "string",
@@ -420,8 +419,7 @@ export const TOOL_DEFINITIONS = [
         },
         nodePath: {
           type: "string",
-          description:
-            'Path to the node to remove (e.g., "root/OldNode")',
+          description: 'Path to the node to remove (e.g., "root/OldNode")',
         },
       },
       required: ["projectPath", "scenePath", "nodePath"],
@@ -429,8 +427,7 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "reparent_node",
-    description:
-      "Move a node to a different parent within the same scene",
+    description: "Move a node to a different parent within the same scene",
     inputSchema: {
       type: "object",
       properties: {
@@ -448,8 +445,7 @@ export const TOOL_DEFINITIONS = [
         },
         newParentPath: {
           type: "string",
-          description:
-            'Path to the new parent node (e.g., "root/NewParent")',
+          description: 'Path to the new parent node (e.g., "root/NewParent")',
         },
       },
       required: ["projectPath", "scenePath", "nodePath", "newParentPath"],
@@ -481,8 +477,7 @@ export const TOOL_DEFINITIONS = [
         },
         targetNodePath: {
           type: "string",
-          description:
-            'Path to the node receiving the signal (e.g., "root")',
+          description: 'Path to the node receiving the signal (e.g., "root")',
         },
         methodName: {
           type: "string",
@@ -502,8 +497,7 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "get_tile_data",
-    description:
-      "Read existing tile cells from a TileMapLayer node in a scene",
+    description: "Read existing tile cells from a TileMapLayer node in a scene",
     inputSchema: {
       type: "object",
       properties: {
@@ -543,8 +537,14 @@ export const TOOL_DEFINITIONS = [
         tileSize: {
           type: "object",
           properties: {
-            x: { type: "integer", description: "Tile width in pixels (default: 16)" },
-            y: { type: "integer", description: "Tile height in pixels (default: 16)" },
+            x: {
+              type: "integer",
+              description: "Tile width in pixels (default: 16)",
+            },
+            y: {
+              type: "integer",
+              description: "Tile height in pixels (default: 16)",
+            },
           },
           description: "Tile size in pixels (default: 16x16)",
         },
@@ -555,8 +555,7 @@ export const TOOL_DEFINITIONS = [
             properties: {
               texturePath: {
                 type: "string",
-                description:
-                  "Path to the texture file (relative to project)",
+                description: "Path to the texture file (relative to project)",
               },
             },
             required: ["texturePath"],
@@ -568,7 +567,10 @@ export const TOOL_DEFINITIONS = [
           items: {
             type: "object",
             properties: {
-              name: { type: "string", description: 'Layer name (e.g., "passable")' },
+              name: {
+                type: "string",
+                description: 'Layer name (e.g., "passable")',
+              },
               type: {
                 type: "string",
                 description:
@@ -577,8 +579,7 @@ export const TOOL_DEFINITIONS = [
             },
             required: ["name", "type"],
           },
-          description:
-            "Optional custom data layers to add to the TileSet",
+          description: "Optional custom data layers to add to the TileSet",
         },
       },
       required: ["projectPath", "resourcePath", "atlasSources"],
@@ -602,8 +603,7 @@ export const TOOL_DEFINITIONS = [
         },
         outputPath: {
           type: "string",
-          description:
-            'Path for the exported file (e.g., "build/game.exe")',
+          description: 'Path for the exported file (e.g., "build/game.exe")',
         },
         debug: {
           type: "boolean",
@@ -734,13 +734,11 @@ export const TOOL_DEFINITIONS = [
         },
         scenePath: {
           type: "string",
-          description:
-            "Path to the parent scene file (relative to project)",
+          description: "Path to the parent scene file (relative to project)",
         },
         childScenePath: {
           type: "string",
-          description:
-            "Path to the scene to instantiate (relative to project)",
+          description: "Path to the scene to instantiate (relative to project)",
         },
         parentNodePath: {
           type: "string",
@@ -832,8 +830,7 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "read_script",
-    description:
-      "Read the contents of a GDScript file from a Godot project",
+    description: "Read the contents of a GDScript file from a Godot project",
     inputSchema: {
       type: "object",
       properties: {
@@ -962,8 +959,7 @@ export const TOOL_DEFINITIONS = [
         },
         nodePath: {
           type: "string",
-          description:
-            'Path to the node to rename (e.g., "root/OldName")',
+          description: 'Path to the node to rename (e.g., "root/OldName")',
         },
         newName: {
           type: "string",
@@ -1063,8 +1059,7 @@ export const TOOL_DEFINITIONS = [
   },
   {
     name: "manage_autoloads",
-    description:
-      "Add, remove, or list autoload singletons in project.godot",
+    description: "Add, remove, or list autoload singletons in project.godot",
     inputSchema: {
       type: "object",
       properties: {
@@ -1110,12 +1105,10 @@ export const TOOL_DEFINITIONS = [
           description: "Path to the physics node",
         },
         collisionLayer: {
-          description:
-            "Array of layer numbers [1,2,3] or raw bitmask integer",
+          description: "Array of layer numbers [1,2,3] or raw bitmask integer",
         },
         collisionMask: {
-          description:
-            "Array of mask numbers [1,2,3] or raw bitmask integer",
+          description: "Array of mask numbers [1,2,3] or raw bitmask integer",
         },
       },
       required: ["projectPath", "scenePath", "nodePath"],

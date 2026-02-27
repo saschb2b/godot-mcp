@@ -1,6 +1,10 @@
 import type { ServerContext } from "../context.js";
 import type { OperationParams, ToolResponse } from "../types.js";
-import { normalizeParameters, validatePath, createErrorResponse } from "../utils.js";
+import {
+  normalizeParameters,
+  validatePath,
+  createErrorResponse,
+} from "../utils.js";
 import { executeOperation } from "../godot-executor.js";
 import { ensureGodotPath } from "../godot-path.js";
 import { join } from "path";
@@ -10,7 +14,10 @@ import { execFile } from "child_process";
 
 const execFileAsync = promisify(execFile);
 
-export async function handleEditProjectSettings(ctx: ServerContext, args: any): Promise<ToolResponse> {
+export async function handleEditProjectSettings(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
   args = normalizeParameters(args);
 
   if (!args.projectPath || !args.settings) {
@@ -43,10 +50,9 @@ export async function handleEditProjectSettings(ctx: ServerContext, args: any): 
     );
 
     if (stderr.includes("Failed to")) {
-      return createErrorResponse(
-        `Failed to edit project settings: ${stderr}`,
-        ["Check if the settings keys are valid"],
-      );
+      return createErrorResponse(`Failed to edit project settings: ${stderr}`, [
+        "Check if the settings keys are valid",
+      ]);
     }
 
     return {
@@ -65,7 +71,10 @@ export async function handleEditProjectSettings(ctx: ServerContext, args: any): 
   }
 }
 
-export async function handleManageAutoloads(ctx: ServerContext, args: any): Promise<ToolResponse> {
+export async function handleManageAutoloads(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
   args = normalizeParameters(args);
 
   if (!args.projectPath || !args.action) {
@@ -91,10 +100,9 @@ export async function handleManageAutoloads(ctx: ServerContext, args: any): Prom
 
     if (args.action === "add") {
       if (!args.name || !args.scriptPath) {
-        return createErrorResponse(
-          "Missing required parameters for add",
-          ["Provide name and scriptPath when adding an autoload"],
-        );
+        return createErrorResponse("Missing required parameters for add", [
+          "Provide name and scriptPath when adding an autoload",
+        ]);
       }
       const scriptFile = join(args.projectPath, args.scriptPath);
       if (!existsSync(scriptFile)) {
@@ -107,10 +115,9 @@ export async function handleManageAutoloads(ctx: ServerContext, args: any): Prom
 
     if (args.action === "remove") {
       if (!args.name) {
-        return createErrorResponse(
-          "Missing required parameters for remove",
-          ["Provide name when removing an autoload"],
-        );
+        return createErrorResponse("Missing required parameters for remove", [
+          "Provide name when removing an autoload",
+        ]);
       }
     }
 
@@ -128,10 +135,9 @@ export async function handleManageAutoloads(ctx: ServerContext, args: any): Prom
     );
 
     if (stderr.includes("Failed to")) {
-      return createErrorResponse(
-        `Failed to manage autoloads: ${stderr}`,
-        ["Check the autoload name and script path"],
-      );
+      return createErrorResponse(`Failed to manage autoloads: ${stderr}`, [
+        "Check the autoload name and script path",
+      ]);
     }
 
     return {
@@ -150,7 +156,10 @@ export async function handleManageAutoloads(ctx: ServerContext, args: any): Prom
   }
 }
 
-export async function handleExportProject(ctx: ServerContext, args: any): Promise<ToolResponse> {
+export async function handleExportProject(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
   args = normalizeParameters(args);
 
   if (!args.projectPath || !args.preset || !args.outputPath) {
@@ -159,10 +168,7 @@ export async function handleExportProject(ctx: ServerContext, args: any): Promis
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.outputPath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.outputPath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);
@@ -220,21 +226,21 @@ export async function handleExportProject(ctx: ServerContext, args: any): Promis
   } catch (error: any) {
     return createErrorResponse(
       `Failed to export project: ${error?.message ?? "Unknown error"}`,
-      [
-        "Ensure the preset name is correct and export templates are installed",
-      ],
+      ["Ensure the preset name is correct and export templates are installed"],
     );
   }
 }
 
-export function handleListInputActions(ctx: ServerContext, args: any): ToolResponse {
+export function handleListInputActions(
+  ctx: ServerContext,
+  args: any,
+): ToolResponse {
   args = normalizeParameters(args);
 
   if (!args.projectPath) {
-    return createErrorResponse(
-      "Missing required parameter: projectPath",
-      ["Provide the path to the Godot project directory"],
-    );
+    return createErrorResponse("Missing required parameter: projectPath", [
+      "Provide the path to the Godot project directory",
+    ]);
   }
 
   try {

@@ -1,11 +1,18 @@
 import type { ServerContext } from "../context.js";
 import type { ToolResponse } from "../types.js";
-import { normalizeParameters, validatePath, createErrorResponse } from "../utils.js";
+import {
+  normalizeParameters,
+  validatePath,
+  createErrorResponse,
+} from "../utils.js";
 import { executeOperation } from "../godot-executor.js";
 import { join } from "path";
 import { existsSync } from "fs";
 
-export async function handleConnectSignal(ctx: ServerContext, args: any): Promise<ToolResponse> {
+export async function handleConnectSignal(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
   args = normalizeParameters(args);
 
   if (
@@ -21,10 +28,7 @@ export async function handleConnectSignal(ctx: ServerContext, args: any): Promis
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);
@@ -83,24 +87,19 @@ export async function handleConnectSignal(ctx: ServerContext, args: any): Promis
   }
 }
 
-export async function handleAddToGroup(ctx: ServerContext, args: any): Promise<ToolResponse> {
+export async function handleAddToGroup(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
   args = normalizeParameters(args);
 
-  if (
-    !args.projectPath ||
-    !args.scenePath ||
-    !args.nodePath ||
-    !args.groups
-  ) {
+  if (!args.projectPath || !args.scenePath || !args.nodePath || !args.groups) {
     return createErrorResponse("Missing required parameters", [
       "Provide projectPath, scenePath, nodePath, and groups",
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);
@@ -136,10 +135,9 @@ export async function handleAddToGroup(ctx: ServerContext, args: any): Promise<T
     );
 
     if (stderr.includes("Failed to")) {
-      return createErrorResponse(
-        `Failed to add node to group: ${stderr}`,
-        ["Check if the node path exists"],
-      );
+      return createErrorResponse(`Failed to add node to group: ${stderr}`, [
+        "Check if the node path exists",
+      ]);
     }
 
     return {
@@ -158,24 +156,19 @@ export async function handleAddToGroup(ctx: ServerContext, args: any): Promise<T
   }
 }
 
-export async function handleRemoveFromGroup(ctx: ServerContext, args: any): Promise<ToolResponse> {
+export async function handleRemoveFromGroup(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
   args = normalizeParameters(args);
 
-  if (
-    !args.projectPath ||
-    !args.scenePath ||
-    !args.nodePath ||
-    !args.groups
-  ) {
+  if (!args.projectPath || !args.scenePath || !args.nodePath || !args.groups) {
     return createErrorResponse("Missing required parameters", [
       "Provide projectPath, scenePath, nodePath, and groups",
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);

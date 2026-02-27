@@ -7,7 +7,10 @@ import { logDebug } from "./utils.js";
 
 const execFileAsync = promisify(execFile);
 
-export function isValidGodotPathSync(path: string, debugMode: boolean): boolean {
+export function isValidGodotPathSync(
+  path: string,
+  debugMode: boolean,
+): boolean {
   try {
     logDebug(debugMode, `Quick-validating Godot path: ${path}`);
     return path === "godot" || existsSync(path);
@@ -40,7 +43,10 @@ export async function isValidGodotPath(
     ctx.validatedPaths.set(path, true);
     return true;
   } catch (error) {
-    logDebug(ctx.debugMode, `Invalid Godot path: ${path}, error: ${String(error)}`);
+    logDebug(
+      ctx.debugMode,
+      `Invalid Godot path: ${path}, error: ${String(error)}`,
+    );
     ctx.validatedPaths.set(path, false);
     return false;
   }
@@ -60,7 +66,10 @@ export async function detectGodotPath(ctx: ServerContext): Promise<void> {
     );
     if (await isValidGodotPath(ctx, normalizedPath)) {
       ctx.godotPath = normalizedPath;
-      logDebug(ctx.debugMode, `Using Godot path from environment: ${ctx.godotPath}`);
+      logDebug(
+        ctx.debugMode,
+        `Using Godot path from environment: ${ctx.godotPath}`,
+      );
       return;
     } else {
       logDebug(ctx.debugMode, `GODOT_PATH environment variable is invalid`);
@@ -68,7 +77,10 @@ export async function detectGodotPath(ctx: ServerContext): Promise<void> {
   }
 
   const osPlatform = process.platform;
-  logDebug(ctx.debugMode, `Auto-detecting Godot path for platform: ${osPlatform}`);
+  logDebug(
+    ctx.debugMode,
+    `Auto-detecting Godot path for platform: ${osPlatform}`,
+  );
 
   const possiblePaths: string[] = ["godot"];
 
@@ -125,9 +137,7 @@ export async function detectGodotPath(ctx: ServerContext): Promise<void> {
     if (osPlatform === "win32") {
       ctx.godotPath = normalize("C:\\Program Files\\Godot\\Godot.exe");
     } else if (osPlatform === "darwin") {
-      ctx.godotPath = normalize(
-        "/Applications/Godot.app/Contents/MacOS/Godot",
-      );
+      ctx.godotPath = normalize("/Applications/Godot.app/Contents/MacOS/Godot");
     } else {
       ctx.godotPath = normalize("/usr/bin/godot");
     }
@@ -160,11 +170,16 @@ export async function setGodotPath(
     return true;
   }
 
-  logDebug(ctx.debugMode, `Failed to set invalid Godot path: ${normalizedPath}`);
+  logDebug(
+    ctx.debugMode,
+    `Failed to set invalid Godot path: ${normalizedPath}`,
+  );
   return false;
 }
 
-export async function ensureGodotPath(ctx: ServerContext): Promise<string | null> {
+export async function ensureGodotPath(
+  ctx: ServerContext,
+): Promise<string | null> {
   if (!ctx.godotPath) {
     await detectGodotPath(ctx);
   }

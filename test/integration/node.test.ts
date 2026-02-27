@@ -11,7 +11,12 @@ import {
 } from "../../src/handlers/node-handlers.js";
 import { handleGetSceneTree } from "../../src/handlers/scene-handlers.js";
 import { initContext, FIXTURE_PATH } from "../setup.js";
-import { assertSuccess, assertError, TestCleanup, copyFixture } from "../helpers.js";
+import {
+  assertSuccess,
+  assertError,
+  TestCleanup,
+  copyFixture,
+} from "../helpers.js";
 import type { ServerContext } from "../../src/context.js";
 
 describe("Node handlers", () => {

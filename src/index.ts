@@ -15,7 +15,11 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 
 import type { GodotServerConfig } from "./types.js";
 import { ServerContext } from "./context.js";
-import { detectGodotPath, isValidGodotPath, isValidGodotPathSync } from "./godot-path.js";
+import {
+  detectGodotPath,
+  isValidGodotPath,
+  isValidGodotPathSync,
+} from "./godot-path.js";
 import { logDebug } from "./utils.js";
 import { setupToolHandlers } from "./tool-router.js";
 
@@ -23,7 +27,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 async function main(config?: GodotServerConfig) {
-  const operationsScriptPath = join(__dirname, "scripts", "godot_operations.gd");
+  const operationsScriptPath = join(
+    __dirname,
+    "scripts",
+    "godot_operations.gd",
+  );
   const ctx = new ServerContext(config ?? {}, operationsScriptPath);
 
   if (ctx.debugMode) {

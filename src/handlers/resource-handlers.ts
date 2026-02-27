@@ -1,11 +1,18 @@
 import type { ServerContext } from "../context.js";
 import type { OperationParams, ToolResponse } from "../types.js";
-import { normalizeParameters, validatePath, createErrorResponse } from "../utils.js";
+import {
+  normalizeParameters,
+  validatePath,
+  createErrorResponse,
+} from "../utils.js";
 import { executeOperation } from "../godot-executor.js";
 import { join } from "path";
 import { existsSync } from "fs";
 
-export async function handleCreateResource(ctx: ServerContext, args: any): Promise<ToolResponse> {
+export async function handleCreateResource(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
   args = normalizeParameters(args);
 
   if (!args.projectPath || !args.resourcePath || !args.resourceType) {
@@ -14,10 +21,7 @@ export async function handleCreateResource(ctx: ServerContext, args: any): Promi
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.resourcePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.resourcePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);
@@ -47,10 +51,9 @@ export async function handleCreateResource(ctx: ServerContext, args: any): Promi
     );
 
     if (stderr.includes("Failed to")) {
-      return createErrorResponse(
-        `Failed to create resource: ${stderr}`,
-        ["Check if the resource type is valid"],
-      );
+      return createErrorResponse(`Failed to create resource: ${stderr}`, [
+        "Check if the resource type is valid",
+      ]);
     }
 
     return {
@@ -69,7 +72,10 @@ export async function handleCreateResource(ctx: ServerContext, args: any): Promi
   }
 }
 
-export async function handleInstantiateScene(ctx: ServerContext, args: any): Promise<ToolResponse> {
+export async function handleInstantiateScene(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
   args = normalizeParameters(args);
 
   if (!args.projectPath || !args.scenePath || !args.childScenePath) {
@@ -78,10 +84,7 @@ export async function handleInstantiateScene(ctx: ServerContext, args: any): Pro
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);
@@ -120,10 +123,9 @@ export async function handleInstantiateScene(ctx: ServerContext, args: any): Pro
     );
 
     if (stderr.includes("Failed to")) {
-      return createErrorResponse(
-        `Failed to instantiate scene: ${stderr}`,
-        ["Check if the child scene path exists"],
-      );
+      return createErrorResponse(`Failed to instantiate scene: ${stderr}`, [
+        "Check if the child scene path exists",
+      ]);
     }
 
     return {
@@ -142,7 +144,10 @@ export async function handleInstantiateScene(ctx: ServerContext, args: any): Pro
   }
 }
 
-export async function handleLoadSprite(ctx: ServerContext, args: any): Promise<ToolResponse> {
+export async function handleLoadSprite(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
   args = normalizeParameters(args);
 
   if (
@@ -242,7 +247,10 @@ export async function handleLoadSprite(ctx: ServerContext, args: any): Promise<T
   }
 }
 
-export async function handleExportMeshLibrary(ctx: ServerContext, args: any): Promise<ToolResponse> {
+export async function handleExportMeshLibrary(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
   args = normalizeParameters(args);
 
   if (!args.projectPath || !args.scenePath || !args.outputPath) {
@@ -301,14 +309,11 @@ export async function handleExportMeshLibrary(ctx: ServerContext, args: any): Pr
     );
 
     if (stderr.includes("Failed to")) {
-      return createErrorResponse(
-        `Failed to export mesh library: ${stderr}`,
-        [
-          "Check if the scene contains valid 3D meshes",
-          "Ensure the output path is valid",
-          "Verify the scene file is valid",
-        ],
-      );
+      return createErrorResponse(`Failed to export mesh library: ${stderr}`, [
+        "Check if the scene contains valid 3D meshes",
+        "Ensure the output path is valid",
+        "Verify the scene file is valid",
+      ]);
     }
 
     return {

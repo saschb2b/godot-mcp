@@ -17,16 +17,12 @@ export async function handleCreateScene(
   args = normalizeParameters(args);
 
   if (!args.projectPath || !args.scenePath) {
-    return createErrorResponse(
-      "Project path and scene path are required",
-      ["Provide valid paths for both the project and the scene"],
-    );
+    return createErrorResponse("Project path and scene path are required", [
+      "Provide valid paths for both the project and the scene",
+    ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".." or other potentially unsafe characters',
     ]);
@@ -100,10 +96,7 @@ export async function handleSaveScene(
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".." or other potentially unsafe characters',
     ]);
@@ -200,10 +193,7 @@ export async function handleGetSceneTree(
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);
@@ -261,10 +251,7 @@ export async function handleValidateScene(
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);

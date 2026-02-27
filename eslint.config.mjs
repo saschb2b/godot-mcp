@@ -12,9 +12,8 @@ const eslintConfig = [
     languageOptions: {
       globals: globals.node,
       parserOptions: {
-        projectService: {
-          allowDefaultProject: ["eslint.config.mjs", "scripts/build.js"],
-        },
+        project: ["tsconfig.json", "tsconfig.test.json"],
+        tsconfigRootDir: import.meta.dirname,
       },
     },
   },
@@ -40,6 +39,10 @@ const eslintConfig = [
 
       // Allow non-null assertions — used intentionally after validation
       "@typescript-eslint/no-non-null-assertion": "off",
+
+      // We use the low-level Server API intentionally (manual setRequestHandler);
+      // McpServer is the high-level API, Server is correct for our advanced usage.
+      "@typescript-eslint/no-deprecated": "off",
     },
   },
   {

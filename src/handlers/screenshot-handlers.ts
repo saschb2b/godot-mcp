@@ -1,9 +1,21 @@
 import type { ServerContext } from "../context.js";
 import type { ToolResponse } from "../types.js";
-import { normalizeParameters, validatePath, createErrorResponse, logDebug } from "../utils.js";
+import {
+  normalizeParameters,
+  validatePath,
+  createErrorResponse,
+  logDebug,
+} from "../utils.js";
 import { ensureGodotPath } from "../godot-path.js";
 import { join, dirname } from "path";
-import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, copyFileSync } from "fs";
+import {
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  unlinkSync,
+  copyFileSync,
+} from "fs";
 import { fileURLToPath } from "url";
 import { promisify } from "util";
 import { execFile } from "child_process";
@@ -11,7 +23,10 @@ import { execFile } from "child_process";
 const execFileAsync = promisify(execFile);
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-export async function handleCaptureScreenshot(ctx: ServerContext, args: any): Promise<ToolResponse> {
+export async function handleCaptureScreenshot(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
   args = normalizeParameters(args);
 
   if (!args.projectPath) {
@@ -79,13 +94,10 @@ export async function handleCaptureScreenshot(ctx: ServerContext, args: any): Pr
     const sceneRelative = scenePath.replace(/^res:\/\//, "");
     const sceneAbsolute = join(args.projectPath, sceneRelative);
     if (!existsSync(sceneAbsolute)) {
-      return createErrorResponse(
-        `Scene file does not exist: ${scenePath}`,
-        [
-          "Ensure the scene path is correct",
-          "Use create_scene to create a new scene first",
-        ],
-      );
+      return createErrorResponse(`Scene file does not exist: ${scenePath}`, [
+        "Ensure the scene path is correct",
+        "Use create_scene to create a new scene first",
+      ]);
     }
 
     // Determine output path
@@ -107,9 +119,7 @@ export async function handleCaptureScreenshot(ctx: ServerContext, args: any): Pr
     if ((args.width && !args.height) || (!args.width && args.height)) {
       return createErrorResponse(
         "Both width and height must be specified together for resolution override",
-        [
-          "Provide both width and height, or omit both to use project defaults",
-        ],
+        ["Provide both width and height, or omit both to use project defaults"],
       );
     }
 
@@ -146,22 +156,17 @@ export async function handleCaptureScreenshot(ctx: ServerContext, args: any): Pr
       `Capturing screenshot: ${godotPath} ${godotArgs.join(" ")}`,
     );
 
-    const { stdout, stderr } = await execFileAsync(
-      godotPath,
-      godotArgs,
-      { timeout: 30000 },
-    );
+    const { stdout, stderr } = await execFileAsync(godotPath, godotArgs, {
+      timeout: 30000,
+    });
 
     // Check for errors
     if (stderr.includes("[ERROR]")) {
-      return createErrorResponse(
-        `Screenshot capture failed: ${stderr}`,
-        [
-          "Check if the scene file is valid",
-          "Ensure a display server is available (not a headless environment)",
-          "Try increasing waitFrames for complex scenes",
-        ],
-      );
+      return createErrorResponse(`Screenshot capture failed: ${stderr}`, [
+        "Check if the scene file is valid",
+        "Ensure a display server is available (not a headless environment)",
+        "Try increasing waitFrames for complex scenes",
+      ]);
     }
 
     // Verify the output file was created
@@ -225,14 +230,16 @@ export async function handleCaptureScreenshot(ctx: ServerContext, args: any): Pr
   }
 }
 
-export async function handleRunAndCapture(ctx: ServerContext, args: any): Promise<ToolResponse> {
+export async function handleRunAndCapture(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
   args = normalizeParameters(args);
 
   if (!args.projectPath) {
-    return createErrorResponse(
-      "Missing required parameter: projectPath",
-      ["Provide the path to the Godot project directory"],
-    );
+    return createErrorResponse("Missing required parameter: projectPath", [
+      "Provide the path to the Godot project directory",
+    ]);
   }
 
   if (!validatePath(args.projectPath)) {
@@ -300,13 +307,10 @@ export async function handleRunAndCapture(ctx: ServerContext, args: any): Promis
   if (!godotPath) {
     // Restore project.godot before returning error
     writeFileSync(projectFile, projectContent);
-    return createErrorResponse(
-      "Could not find a valid Godot executable path",
-      [
-        "Ensure Godot is installed correctly",
-        "Set GODOT_PATH environment variable",
-      ],
-    );
+    return createErrorResponse("Could not find a valid Godot executable path", [
+      "Ensure Godot is installed correctly",
+      "Set GODOT_PATH environment variable",
+    ]);
   }
 
   try {
@@ -368,10 +372,7 @@ export async function handleRunAndCapture(ctx: ServerContext, args: any): Promis
       }
       return createErrorResponse(
         "run_and_capture timed out without capturing a screenshot.",
-        [
-          "Try increasing the duration",
-          "Check if the project runs correctly",
-        ],
+        ["Try increasing the duration", "Check if the project runs correctly"],
       );
     }
 
@@ -387,13 +388,10 @@ export async function handleRunAndCapture(ctx: ServerContext, args: any): Promis
       };
     }
 
-    return createErrorResponse(
-      `run_and_capture failed: ${execError.message}`,
-      [
-        "Ensure Godot is installed correctly",
-        "Ensure a display server is available",
-      ],
-    );
+    return createErrorResponse(`run_and_capture failed: ${execError.message}`, [
+      "Ensure Godot is installed correctly",
+      "Ensure a display server is available",
+    ]);
   } finally {
     // Clean up: restore project.godot, remove temp files
     writeFileSync(projectFile, projectContent);

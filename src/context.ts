@@ -1,4 +1,9 @@
-import type { GodotProcess, TcpState, InteractiveState, GodotServerConfig } from "./types.js";
+import type {
+  GodotProcess,
+  TcpState,
+  InteractiveState,
+  GodotServerConfig,
+} from "./types.js";
 
 export class ServerContext {
   godotPath: string | null = null;
@@ -23,7 +28,7 @@ export class ServerContext {
 
   constructor(config: GodotServerConfig, operationsScriptPath: string) {
     this.operationsScriptPath = operationsScriptPath;
-    this.debugMode = config.debugMode ?? (process.env.DEBUG === "true");
+    this.debugMode = config.debugMode ?? process.env.DEBUG === "true";
     this.strictPathValidation = config.strictPathValidation ?? false;
   }
 }

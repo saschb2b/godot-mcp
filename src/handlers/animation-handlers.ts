@@ -26,10 +26,7 @@ export async function handleAddAnimation(
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);
@@ -102,10 +99,7 @@ export async function handleCreateAnimationPlayer(
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);

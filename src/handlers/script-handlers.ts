@@ -1,11 +1,18 @@
 import type { ServerContext } from "../context.js";
 import type { ToolResponse } from "../types.js";
-import { normalizeParameters, validatePath, createErrorResponse } from "../utils.js";
+import {
+  normalizeParameters,
+  validatePath,
+  createErrorResponse,
+} from "../utils.js";
 import { executeOperation } from "../godot-executor.js";
 import { join, dirname } from "path";
 import { existsSync, writeFileSync, mkdirSync } from "fs";
 
-export async function handleReadScript(ctx: ServerContext, args: any): Promise<ToolResponse> {
+export async function handleReadScript(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
   args = normalizeParameters(args);
 
   if (!args.projectPath || !args.scriptPath) {
@@ -14,10 +21,7 @@ export async function handleReadScript(ctx: ServerContext, args: any): Promise<T
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scriptPath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scriptPath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);
@@ -79,10 +83,7 @@ export function handleWriteScript(ctx: ServerContext, args: any): ToolResponse {
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scriptPath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scriptPath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);

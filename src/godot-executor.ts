@@ -17,7 +17,10 @@ export async function executeOperation(
     ctx.debugMode,
     `Executing operation: ${operation} in project: ${projectPath}`,
   );
-  logDebug(ctx.debugMode, `Original operation params: ${JSON.stringify(params)}`);
+  logDebug(
+    ctx.debugMode,
+    `Original operation params: ${JSON.stringify(params)}`,
+  );
 
   const snakeCaseParams = convertCamelToSnakeCase(params);
   logDebug(

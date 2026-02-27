@@ -186,14 +186,11 @@ export async function handleRunProject(
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
-    return createErrorResponse(
-      `Failed to run Godot project: ${errorMessage}`,
-      [
-        "Ensure Godot is installed correctly",
-        "Check if the GODOT_PATH environment variable is set correctly",
-        "Verify the project path is accessible",
-      ],
-    );
+    return createErrorResponse(`Failed to run Godot project: ${errorMessage}`, [
+      "Ensure Godot is installed correctly",
+      "Check if the GODOT_PATH environment variable is set correctly",
+      "Verify the project path is accessible",
+    ]);
   }
 }
 

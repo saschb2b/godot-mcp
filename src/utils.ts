@@ -41,7 +41,10 @@ export function logDebug(debugMode: boolean, message: string): void {
 }
 
 /** Kill a child process and wait for it to exit (with a timeout fallback). */
-export function killProcess(proc: ChildProcess, timeoutMs = 3000): Promise<void> {
+export function killProcess(
+  proc: ChildProcess,
+  timeoutMs = 3000,
+): Promise<void> {
   return new Promise((resolve) => {
     if (!proc.pid || proc.exitCode !== null) {
       resolve();
@@ -162,7 +165,10 @@ export function isGodot44OrLater(version: string): boolean {
   return false;
 }
 
-export function getProjectStructure(projectPath: string, debugMode: boolean): any {
+export function getProjectStructure(
+  projectPath: string,
+  debugMode: boolean,
+): any {
   try {
     const entries = readdirSync(projectPath, { withFileTypes: true });
 
@@ -329,7 +335,10 @@ export function findGodotProjects(
       }
     }
   } catch (error) {
-    logDebug(debugMode, `Error searching directory ${directory}: ${String(error)}`);
+    logDebug(
+      debugMode,
+      `Error searching directory ${directory}: ${String(error)}`,
+    );
   }
 
   return projects;

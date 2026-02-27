@@ -27,10 +27,7 @@ export async function handleAddNode(
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".." or other potentially unsafe characters',
     ]);
@@ -125,10 +122,7 @@ export async function handleRemoveNode(
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);
@@ -198,10 +192,7 @@ export async function handleReparentNode(
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);
@@ -270,10 +261,7 @@ export async function handleDuplicateNode(
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);
@@ -338,21 +326,13 @@ export async function handleRenameNode(
 ): Promise<ToolResponse> {
   args = normalizeParameters(args);
 
-  if (
-    !args.projectPath ||
-    !args.scenePath ||
-    !args.nodePath ||
-    !args.newName
-  ) {
+  if (!args.projectPath || !args.scenePath || !args.nodePath || !args.newName) {
     return createErrorResponse("Missing required parameters", [
       "Provide projectPath, scenePath, nodePath, and newName",
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);
@@ -410,10 +390,7 @@ export async function handleSetNodeProperties(
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);
@@ -449,10 +426,9 @@ export async function handleSetNodeProperties(
     );
 
     if (stderr.includes("Failed to")) {
-      return createErrorResponse(
-        `Failed to set node properties: ${stderr}`,
-        ["Check if the node path exists"],
-      );
+      return createErrorResponse(`Failed to set node properties: ${stderr}`, [
+        "Check if the node path exists",
+      ]);
     }
 
     return {
@@ -483,10 +459,7 @@ export async function handleGetNodeProperties(
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);
@@ -523,10 +496,9 @@ export async function handleGetNodeProperties(
     );
 
     if (stderr.includes("Failed to")) {
-      return createErrorResponse(
-        `Failed to get node properties: ${stderr}`,
-        ["Check if the node path exists"],
-      );
+      return createErrorResponse(`Failed to get node properties: ${stderr}`, [
+        "Check if the node path exists",
+      ]);
     }
 
     return {
@@ -674,10 +646,7 @@ export async function handleSetCollisionLayerMask(
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);

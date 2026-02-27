@@ -1,11 +1,18 @@
 import type { ServerContext } from "../context.js";
 import type { ToolResponse } from "../types.js";
-import { normalizeParameters, validatePath, createErrorResponse } from "../utils.js";
+import {
+  normalizeParameters,
+  validatePath,
+  createErrorResponse,
+} from "../utils.js";
 import { executeOperation } from "../godot-executor.js";
 import { join } from "path";
 import { existsSync } from "fs";
 
-export async function handleSetCells(ctx: ServerContext, args: any): Promise<ToolResponse> {
+export async function handleSetCells(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
   args = normalizeParameters(args);
 
   if (!args.projectPath || !args.scenePath || !args.nodePath || !args.cells) {
@@ -14,10 +21,7 @@ export async function handleSetCells(ctx: ServerContext, args: any): Promise<Too
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".." or other potentially unsafe characters',
     ]);
@@ -87,7 +91,10 @@ export async function handleSetCells(ctx: ServerContext, args: any): Promise<Too
   }
 }
 
-export async function handleGetTileData(ctx: ServerContext, args: any): Promise<ToolResponse> {
+export async function handleGetTileData(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
   args = normalizeParameters(args);
 
   if (!args.projectPath || !args.scenePath || !args.nodePath) {
@@ -96,10 +103,7 @@ export async function handleGetTileData(ctx: ServerContext, args: any): Promise<
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);
@@ -145,7 +149,10 @@ export async function handleGetTileData(ctx: ServerContext, args: any): Promise<
   }
 }
 
-export async function handleCreateTileset(ctx: ServerContext, args: any): Promise<ToolResponse> {
+export async function handleCreateTileset(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
   args = normalizeParameters(args);
 
   if (!args.projectPath || !args.resourcePath || !args.atlasSources) {
@@ -154,10 +161,7 @@ export async function handleCreateTileset(ctx: ServerContext, args: any): Promis
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.resourcePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.resourcePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);
@@ -208,7 +212,10 @@ export async function handleCreateTileset(ctx: ServerContext, args: any): Promis
   }
 }
 
-export async function handleSetCustomTileData(ctx: ServerContext, args: any): Promise<ToolResponse> {
+export async function handleSetCustomTileData(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
   args = normalizeParameters(args);
 
   if (!args.projectPath || !args.scenePath || !args.nodePath || !args.cells) {
@@ -217,10 +224,7 @@ export async function handleSetCustomTileData(ctx: ServerContext, args: any): Pr
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.scenePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.scenePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".."',
     ]);
@@ -256,10 +260,9 @@ export async function handleSetCustomTileData(ctx: ServerContext, args: any): Pr
     );
 
     if (stderr.includes("Failed to")) {
-      return createErrorResponse(
-        `Failed to set custom tile data: ${stderr}`,
-        ["Check if the TileMapLayer node path exists"],
-      );
+      return createErrorResponse(`Failed to set custom tile data: ${stderr}`, [
+        "Check if the TileMapLayer node path exists",
+      ]);
     }
 
     return {

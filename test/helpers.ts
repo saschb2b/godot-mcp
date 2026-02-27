@@ -1,4 +1,4 @@
-import { existsSync, unlinkSync, rmSync, copyFileSync } from "fs";
+import { existsSync, rmSync, copyFileSync } from "fs";
 import { join } from "path";
 import type { ToolResponse } from "../src/types.js";
 import { FIXTURE_PATH } from "./setup.js";

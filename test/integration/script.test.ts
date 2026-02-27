@@ -48,7 +48,9 @@ describe("Script handlers", () => {
     });
     assertSuccess(res);
     expect(existsSync(join(FIXTURE_PATH, "scripts/test_new.gd"))).toBe(true);
-    expect(readFileSync(join(FIXTURE_PATH, "scripts/test_new.gd"), "utf-8")).toBe(content);
+    expect(
+      readFileSync(join(FIXTURE_PATH, "scripts/test_new.gd"), "utf-8"),
+    ).toBe(content);
   });
 
   it("creates directories when writing", () => {

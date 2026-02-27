@@ -48,7 +48,11 @@ export function handleListProjects(
     }
 
     const recursive = args.recursive === true;
-    const projects = findGodotProjects(args.directory, recursive, ctx.debugMode);
+    const projects = findGodotProjects(
+      args.directory,
+      recursive,
+      ctx.debugMode,
+    );
 
     return {
       content: [
@@ -133,9 +137,7 @@ export async function handleGetProjectInfo(
     let projectName = basename(args.projectPath);
     try {
       const projectFileContent = readFileSync(projectFile, "utf8");
-      const configNameMatch = /config\/name="([^"]+)"/.exec(
-        projectFileContent,
-      );
+      const configNameMatch = /config\/name="([^"]+)"/.exec(projectFileContent);
       if (configNameMatch?.[1]) {
         projectName = configNameMatch[1];
         logDebug(ctx.debugMode, `Found project name in config: ${projectName}`);
@@ -203,12 +205,9 @@ export async function handleGetGodotVersion(
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
-    return createErrorResponse(
-      `Failed to get Godot version: ${errorMessage}`,
-      [
-        "Ensure Godot is installed correctly",
-        "Check if the GODOT_PATH environment variable is set correctly",
-      ],
-    );
+    return createErrorResponse(`Failed to get Godot version: ${errorMessage}`, [
+      "Ensure Godot is installed correctly",
+      "Check if the GODOT_PATH environment variable is set correctly",
+    ]);
   }
 }

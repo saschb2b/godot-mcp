@@ -110,10 +110,7 @@ export function setupToolHandlers(server: Server, ctx: ServerContext): void {
 
     const handler = HANDLER_MAP[toolName];
     if (!handler) {
-      throw new McpError(
-        ErrorCode.MethodNotFound,
-        `Unknown tool: ${toolName}`,
-      );
+      throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${toolName}`);
     }
 
     return await handler(ctx, request.params.arguments);

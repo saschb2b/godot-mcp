@@ -1,6 +1,11 @@
 import type { ServerContext } from "../context.js";
 import type { ToolResponse } from "../types.js";
-import { normalizeParameters, validatePath, createErrorResponse, isGodot44OrLater } from "../utils.js";
+import {
+  normalizeParameters,
+  validatePath,
+  createErrorResponse,
+  isGodot44OrLater,
+} from "../utils.js";
 import { executeOperation } from "../godot-executor.js";
 import { ensureGodotPath } from "../godot-path.js";
 import { join } from "path";
@@ -10,7 +15,10 @@ import { execFile } from "child_process";
 
 const execFileAsync = promisify(execFile);
 
-export async function handleGetUid(ctx: ServerContext, args: any): Promise<ToolResponse> {
+export async function handleGetUid(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
   args = normalizeParameters(args);
 
   if (!args.projectPath || !args.filePath) {
@@ -19,10 +27,7 @@ export async function handleGetUid(ctx: ServerContext, args: any): Promise<ToolR
     ]);
   }
 
-  if (
-    !validatePath(args.projectPath) ||
-    !validatePath(args.filePath)
-  ) {
+  if (!validatePath(args.projectPath) || !validatePath(args.filePath)) {
     return createErrorResponse("Invalid path", [
       'Provide valid paths without ".." or other potentially unsafe characters',
     ]);
@@ -55,10 +60,9 @@ export async function handleGetUid(ctx: ServerContext, args: any): Promise<ToolR
 
     const filePath = join(args.projectPath, args.filePath);
     if (!existsSync(filePath)) {
-      return createErrorResponse(
-        `File does not exist: ${args.filePath}`,
-        ["Ensure the file path is correct"],
-      );
+      return createErrorResponse(`File does not exist: ${args.filePath}`, [
+        "Ensure the file path is correct",
+      ]);
     }
 
     // Get Godot version to check if UIDs are supported
@@ -115,7 +119,10 @@ export async function handleGetUid(ctx: ServerContext, args: any): Promise<ToolR
   }
 }
 
-export async function handleUpdateProjectUids(ctx: ServerContext, args: any): Promise<ToolResponse> {
+export async function handleUpdateProjectUids(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
   args = normalizeParameters(args);
 
   if (!args.projectPath) {
@@ -183,13 +190,10 @@ export async function handleUpdateProjectUids(ctx: ServerContext, args: any): Pr
     );
 
     if (stderr.includes("Failed to")) {
-      return createErrorResponse(
-        `Failed to update project UIDs: ${stderr}`,
-        [
-          "Check if the project is valid",
-          "Ensure you have write permissions to the project directory",
-        ],
-      );
+      return createErrorResponse(`Failed to update project UIDs: ${stderr}`, [
+        "Check if the project is valid",
+        "Ensure you have write permissions to the project directory",
+      ]);
     }
 
     return {
