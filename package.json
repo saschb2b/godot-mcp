@@ -28,6 +28,9 @@
   ],
   "scripts": {
     "build": "tsc && node scripts/build.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run test/unit/",
     "lint": "eslint .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
@@ -48,7 +51,8 @@
     "globals": "^17.3.0",
     "prettier": "^3.8.1",
     "typescript": "^5.3.3",
-    "typescript-eslint": "^8.56.1"
+    "typescript-eslint": "^8.56.1",
+    "vitest": "^4.0.18"
   },
   "engines": {
     "node": ">=18.0.0"

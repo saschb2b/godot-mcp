@@ -371,7 +371,7 @@ export async function handleRenameNode(
       args.projectPath,
     );
 
-    if (stderr && (stderr.includes("ERROR") || stderr.includes("printerr"))) {
+    if (stderr.includes("Failed to")) {
       return createErrorResponse(`Failed to rename node: ${stderr}`, [
         "Ensure the node path is correct",
       ]);

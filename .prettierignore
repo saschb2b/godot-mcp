@@ -3,3 +3,4 @@ node_modules
 .claude
 pnpm-lock.yaml
 *.gd
+test/fixture

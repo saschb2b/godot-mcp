@@ -43,7 +43,7 @@ const eslintConfig = [
     },
   },
   {
-    ignores: ["node_modules/**", "build/**"],
+    ignores: ["node_modules/**", "build/**", "test/fixture/**"],
   },
 ];
 

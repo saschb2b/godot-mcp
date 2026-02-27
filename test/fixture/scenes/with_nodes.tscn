@@ -1,0 +1,13 @@
+[gd_scene format=3]
+
+[node name="Root" type="Node2D"]
+
+[node name="Player" type="CharacterBody2D" parent="."]
+
+[node name="Sprite" type="Sprite2D" parent="Player"]
+
+[node name="Collision" type="CollisionShape2D" parent="Player"]
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Label" type="Label" parent="UI"]

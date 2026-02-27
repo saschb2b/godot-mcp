@@ -30,3 +30,8 @@ Thumbs.db
 
 # Coverage directory
 coverage/
+
+# Test fixture Godot cache
+test/fixture/.godot/
+test/fixture/.import/
+test/fixture/screenshots/
