@@ -47,7 +47,7 @@ You (natural language) --> AI Assistant --> MCP Server --> Godot Engine
                            your request   add_node()     in .tscn file
 ```
 
-You talk to your AI assistant normally. When it needs to do something in Godot, it calls one of the 57 tools this server provides. **You don't write any code yourself** -- the AI handles that.
+You talk to your AI assistant normally. When it needs to do something in Godot, it calls one of the 59 tools this server provides. **You don't write any code yourself** -- the AI handles that.
 
 ## Quickstart
 
@@ -266,7 +266,7 @@ Ask Cline: _"Use the get_godot_version tool"_ -- if it returns a version, the fu
 
 This isn't just "launch editor and read logs". The MCP server can **build an entire game from scratch** -- create scenes, add and configure nodes, write GDScript files, wire up signals, set up tilemaps, then **run the game, play it via input commands, and observe the results through screenshots and state queries**.
 
-### 58 Tools Across 9 Categories
+### 59 Tools Across 9 Categories
 
 **Project & Editor**
 | Tool | Description |
@@ -347,6 +347,7 @@ This isn't just "launch editor and read logs". The MCP server can **build an ent
 | `wait_for_node` | Block until a node appears in the scene tree |
 | `get_performance_metrics` | Retrieve FPS, draw calls, memory, node count, physics stats |
 | `reset_scene` | Reload the current scene (handy for test loops) |
+| `get_runtime_errors` | Retrieve runtime errors/warnings with backtraces (Godot 4.5+ Logger API) |
 | `game_screenshot` | Capture the live game viewport as PNG |
 | `run_and_capture` | Run game for N seconds, capture screenshot, stop |
 | `capture_screenshot` | Render a scene to PNG (static, no runtime) |

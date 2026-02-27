@@ -1505,6 +1505,22 @@ export const TOOL_DEFINITIONS = [
     },
   },
   {
+    name: "get_runtime_errors",
+    description:
+      "Retrieve runtime errors, warnings, and script backtraces captured since the last call. Uses Godot 4.5's Logger API to intercept all engine errors. Returns structured entries with error type, source file/line, and stack traces. By default clears the buffer after reading. Requires Godot 4.5+ and a game running via run_interactive.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        clear: {
+          type: "boolean",
+          description:
+            "Whether to clear the error buffer after reading (default: true). Set to false to peek without consuming.",
+        },
+      },
+      required: [],
+    },
+  },
+  {
     name: "get_scene_insights",
     description:
       "Analyze a scene's architecture: node type distribution, signal connections, sub-scene instances, script attachments, group memberships, and tree depth. Gives deeper understanding than raw node trees. Runs via headless Godot (no game needs to be running).",

@@ -14,6 +14,7 @@ import {
   handleWaitForNode,
   handleGetPerformanceMetrics,
   handleResetScene,
+  handleGetRuntimeErrors,
 } from "../../src/handlers/interactive-handlers.js";
 import { initContext } from "../setup.js";
 import { assertError } from "../helpers.js";
@@ -229,6 +230,14 @@ describe("Interactive handlers", () => {
   describe("reset_scene", () => {
     it("errors when no game is running", async () => {
       const res = await handleResetScene(ctx);
+      assertError(res);
+      expect(res.content[0]!.text).toContain("run_interactive");
+    });
+  });
+
+  describe("get_runtime_errors", () => {
+    it("errors when no game is running", async () => {
+      const res = await handleGetRuntimeErrors(ctx, {});
       assertError(res);
       expect(res.content[0]!.text).toContain("run_interactive");
     });

@@ -474,6 +474,27 @@ export async function handleResetScene(
   }
 }
 
+export async function handleGetRuntimeErrors(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  try {
+    const command: Record<string, unknown> = { type: "get_runtime_errors" };
+    if (args?.clear === false) command.clear = false;
+
+    const response = await sendTcpCommand(ctx, command);
+    return {
+      content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return createErrorResponse(msg, [
+      "Ensure the game is running via run_interactive",
+      "This tool requires Godot 4.5+ (Logger API)",
+    ]);
+  }
+}
+
 export async function handleGameScreenshot(
   ctx: ServerContext,
   args: any,

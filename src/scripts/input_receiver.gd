@@ -21,14 +21,91 @@ extends Node
 #   {"type": "wait_for_node", "node_path": "Player/Sword", "timeout": 5.0}
 #   {"type": "get_performance_metrics"}
 #   {"type": "reset_scene"}
+#   {"type": "get_runtime_errors", "clear": true}
+
+
+# Custom Logger that buffers runtime errors/warnings (Godot 4.5+)
+class _McpLogger extends Logger:
+	var _entries: Array[Dictionary] = []
+	var _mutex := Mutex.new()
+
+	func _log_error(function: String, file: String, line: int, code: String,
+			rationale: String, _editor_notify: bool, error_type: int,
+			script_backtraces: Array[ScriptBacktrace]) -> void:
+		var type_name: String
+		match error_type:
+			Logger.ERROR_TYPE_ERROR:
+				type_name = "error"
+			Logger.ERROR_TYPE_WARNING:
+				type_name = "warning"
+			Logger.ERROR_TYPE_SCRIPT:
+				type_name = "script_error"
+			Logger.ERROR_TYPE_SHADER:
+				type_name = "shader_error"
+			_:
+				type_name = "unknown"
+
+		var backtraces_arr: Array = []
+		for bt in script_backtraces:
+			var frames: Array = []
+			for i in bt.get_frame_count():
+				frames.append({
+					"file": bt.get_frame_source_file(i),
+					"line": bt.get_frame_line(i),
+					"function": bt.get_frame_function(i),
+				})
+			backtraces_arr.append(frames)
+
+		var entry := {
+			"type": type_name,
+			"function": function,
+			"file": file,
+			"line": line,
+			"code": code,
+			"rationale": rationale,
+			"backtraces": backtraces_arr,
+		}
+
+		_mutex.lock()
+		_entries.append(entry)
+		_mutex.unlock()
+
+	func _log_message(message: String, error: bool) -> void:
+		# Only buffer stderr messages (actual errors), not regular prints
+		if not error:
+			return
+		_mutex.lock()
+		_entries.append({
+			"type": "stderr",
+			"message": message,
+		})
+		_mutex.unlock()
+
+	func get_and_clear() -> Array[Dictionary]:
+		_mutex.lock()
+		var result := _entries.duplicate()
+		_entries.clear()
+		_mutex.unlock()
+		return result
+
+	func get_all() -> Array[Dictionary]:
+		_mutex.lock()
+		var result := _entries.duplicate()
+		_mutex.unlock()
+		return result
+
 
 const PORT := 9876
 
 var _server: TCPServer
 var _client: StreamPeerTCP
 var _buffer: String = ""
+var _logger: _McpLogger
 
 func _ready() -> void:
+	_logger = _McpLogger.new()
+	OS.add_logger(_logger)
+
 	_server = TCPServer.new()
 	var err := _server.listen(PORT, "127.0.0.1")
 	if err != OK:
@@ -112,6 +189,8 @@ func _dispatch(json_str: String) -> void:
 			_handle_get_performance_metrics(data)
 		"reset_scene":
 			_handle_reset_scene()
+		"get_runtime_errors":
+			_handle_get_runtime_errors(data)
 		_:
 			# Default: treat as input action
 			_handle_input(data)
@@ -482,6 +561,16 @@ func _handle_reset_scene() -> void:
 		_send_response({"error": "Failed to reload scene: " + str(err)})
 		return
 	_send_response({"ok": true, "type": "reset_scene", "scene": scene_name})
+
+
+func _handle_get_runtime_errors(data: Dictionary) -> void:
+	var clear: bool = data.get("clear", true)
+	var entries: Array
+	if clear:
+		entries = _logger.get_and_clear()
+	else:
+		entries = _logger.get_all()
+	_send_response({"ok": true, "type": "get_runtime_errors", "count": entries.size(), "errors": entries})
 
 
 func _serialize_value(value: Variant) -> Variant:

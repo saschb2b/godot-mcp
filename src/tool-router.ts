@@ -104,6 +104,7 @@ const HANDLER_MAP: Record<string, HandlerFn> = {
   wait_for_node: interactiveHandlers.handleWaitForNode,
   get_performance_metrics: interactiveHandlers.handleGetPerformanceMetrics,
   reset_scene: interactiveHandlers.handleResetScene,
+  get_runtime_errors: interactiveHandlers.handleGetRuntimeErrors,
   game_screenshot: interactiveHandlers.handleGameScreenshot,
 
   // Screenshots
