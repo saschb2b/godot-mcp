@@ -20,6 +20,7 @@ import {
 } from "fs";
 import { spawn, execFile } from "child_process";
 import { promisify } from "util";
+import * as net from "net";
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -73,6 +74,8 @@ class GodotServer {
   private operationsScriptPath: string;
   private validatedPaths = new Map<string, boolean>();
   private strictPathValidation = false;
+  private interactiveProjectPath: string | null = null;
+  private interactiveOriginalProjectGodot: string | null = null;
 
   /**
    * Parameter name mappings between snake_case and camelCase
@@ -1875,6 +1878,72 @@ class GodotServer {
             required: ["projectPath"],
           },
         },
+        {
+          name: "send_input",
+          description:
+            "Send an input action to a running Godot project via TCP. The project must be running with the MCP input receiver (use run_interactive to start with input support). Supports game actions like move_up, move_down, move_left, move_right, or any custom input action defined in the project.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              action: {
+                type: "string",
+                description:
+                  'The input action name (e.g., "move_up", "move_left", "restart")',
+              },
+              pressed: {
+                type: "boolean",
+                description:
+                  "Whether the action is pressed (true) or released (false). Default: true. For simple actions, just send pressed=true — the game handles it as a single press.",
+              },
+            },
+            required: ["action"],
+          },
+        },
+        {
+          name: "run_interactive",
+          description:
+            "Run a Godot project with MCP input receiver injected. This starts the game with a TCP server that accepts input commands via the send_input tool, and supports runtime screenshots and state queries. Use this instead of run_project when you want to interact with the game.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              projectPath: {
+                type: "string",
+                description: "Path to the Godot project directory",
+              },
+              scene: {
+                type: "string",
+                description: "Optional: Specific scene to run",
+              },
+            },
+            required: ["projectPath"],
+          },
+        },
+        {
+          name: "game_state",
+          description:
+            "Get the current game state from a running interactive Godot project. Returns health, score, turn, level, player position, and other state from autoloads. The project must be running via run_interactive.",
+          inputSchema: {
+            type: "object",
+            properties: {},
+            required: [],
+          },
+        },
+        {
+          name: "game_screenshot",
+          description:
+            "Capture a screenshot from a running interactive Godot project. Unlike capture_screenshot, this captures the actual live game with all runtime state (procedural content, animations, etc). The project must be running via run_interactive.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              outputPath: {
+                type: "string",
+                description:
+                  'Path where the screenshot PNG will be saved. Defaults to project screenshots/capture.png.',
+              },
+            },
+            required: [],
+          },
+        },
       ],
     }));
 
@@ -1966,6 +2035,14 @@ class GodotServer {
           return await this.handleCaptureScreenshot(request.params.arguments);
         case "run_and_capture":
           return await this.handleRunAndCapture(request.params.arguments);
+        case "send_input":
+          return await this.handleSendInput(request.params.arguments);
+        case "run_interactive":
+          return await this.handleRunInteractive(request.params.arguments);
+        case "game_state":
+          return await this.handleGameState();
+        case "game_screenshot":
+          return await this.handleGameScreenshot(request.params.arguments);
         default:
           throw new McpError(
             ErrorCode.MethodNotFound,
@@ -5401,6 +5478,273 @@ class GodotServer {
       try {
         if (existsSync(configPath)) unlinkSync(configPath);
       } catch { /* ignore cleanup errors */ }
+    }
+  }
+
+  /**
+   * Send a TCP command to the input receiver running inside Godot
+   * and return the JSON response.
+   */
+  private sendTcpCommand(
+    command: Record<string, unknown>,
+    port = 9876,
+  ): Promise<Record<string, unknown>> {
+    return new Promise((resolve, reject) => {
+      const client = net.createConnection(port, "127.0.0.1", () => {
+        client.write(JSON.stringify(command) + "\n");
+      });
+
+      let buffer = "";
+      client.on("data", (data) => {
+        buffer += data.toString();
+        if (buffer.includes("\n")) {
+          try {
+            const response = JSON.parse(buffer.trim());
+            client.destroy();
+            resolve(response as Record<string, unknown>);
+          } catch {
+            client.destroy();
+            reject(new Error("Invalid JSON response from Godot"));
+          }
+        }
+      });
+
+      client.on("error", (err) => {
+        reject(
+          new Error(
+            `Cannot connect to Godot input receiver: ${err.message}. Is the game running via run_interactive?`,
+          ),
+        );
+      });
+
+      setTimeout(() => {
+        client.destroy();
+        reject(new Error("TCP command timed out"));
+      }, 5000);
+    });
+  }
+
+  /**
+   * Handle run_interactive — inject input receiver autoload and start the game.
+   */
+  private async handleRunInteractive(args: any) {
+    args = this.normalizeParameters(args);
+
+    if (!args.projectPath) {
+      return this.createErrorResponse("Missing required parameter: projectPath", [
+        "Provide the path to the Godot project directory",
+      ]);
+    }
+
+    const projectFile = join(args.projectPath, "project.godot");
+    if (!existsSync(projectFile)) {
+      return this.createErrorResponse(
+        `Not a valid Godot project: ${args.projectPath}`,
+        ["Ensure the path contains a project.godot file"],
+      );
+    }
+
+    // Copy input receiver script
+    const scriptFilename = ".mcp_input_receiver.gd";
+    const scriptDest = join(args.projectPath, scriptFilename);
+    const receiverSrc = join(
+      dirname(fileURLToPath(import.meta.url)),
+      "scripts",
+      "input_receiver.gd",
+    );
+    copyFileSync(receiverSrc, scriptDest);
+
+    // Save original project.godot and inject autoload
+    const projectContent = readFileSync(projectFile, "utf-8");
+    this.interactiveOriginalProjectGodot = projectContent;
+    this.interactiveProjectPath = args.projectPath;
+
+    let modifiedContent: string;
+    if (projectContent.includes("[autoload]")) {
+      modifiedContent = projectContent.replace(
+        "[autoload]",
+        `[autoload]\n\n_McpInputReceiver="*res://${scriptFilename}"`,
+      );
+    } else {
+      modifiedContent =
+        projectContent +
+        `\n[autoload]\n\n_McpInputReceiver="*res://${scriptFilename}"\n`;
+    }
+    writeFileSync(projectFile, modifiedContent);
+
+    // Kill existing process
+    if (this.activeProcess) {
+      this.activeProcess.process.kill();
+      this.activeProcess = null;
+    }
+
+    // Start the game
+    const cmdArgs = ["-d", "--path", args.projectPath];
+    if (args.scene && this.validatePath(args.scene)) {
+      cmdArgs.push(args.scene);
+    }
+
+    const process = spawn(this.godotPath!, cmdArgs, { stdio: "pipe" });
+    const output: string[] = [];
+    const errors: string[] = [];
+
+    process.stdout.on("data", (data: Buffer) => {
+      const lines = data.toString().split("\n");
+      output.push(...lines);
+    });
+
+    process.stderr.on("data", (data: Buffer) => {
+      const lines = data.toString().split("\n");
+      errors.push(...lines);
+    });
+
+    process.on("exit", () => {
+      // Restore project.godot on exit
+      this.cleanupInteractive();
+      if (this.activeProcess?.process === process) {
+        this.activeProcess = null;
+      }
+    });
+
+    process.on("error", () => {
+      this.cleanupInteractive();
+      if (this.activeProcess?.process === process) {
+        this.activeProcess = null;
+      }
+    });
+
+    this.activeProcess = { process, output, errors };
+
+    // Wait a moment for TCP server to start
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Game started in interactive mode with input receiver.\nUse send_input to send actions, game_state to check state, game_screenshot for live screenshots.\nStop with stop_project.`,
+        },
+      ],
+    };
+  }
+
+  /**
+   * Clean up interactive mode files.
+   */
+  private cleanupInteractive() {
+    if (!this.interactiveProjectPath) return;
+
+    try {
+      // Restore original project.godot
+      if (this.interactiveOriginalProjectGodot) {
+        const projectFile = join(this.interactiveProjectPath, "project.godot");
+        writeFileSync(projectFile, this.interactiveOriginalProjectGodot);
+      }
+
+      // Remove temp script
+      const scriptPath = join(
+        this.interactiveProjectPath,
+        ".mcp_input_receiver.gd",
+      );
+      if (existsSync(scriptPath)) unlinkSync(scriptPath);
+    } catch {
+      /* ignore cleanup errors */
+    }
+
+    this.interactiveProjectPath = null;
+    this.interactiveOriginalProjectGodot = null;
+  }
+
+  /**
+   * Handle send_input — send an action to the running game.
+   */
+  private async handleSendInput(args: any) {
+    if (!args?.action) {
+      return this.createErrorResponse("Missing required parameter: action", [
+        'Provide the input action name (e.g., "move_up")',
+      ]);
+    }
+
+    try {
+      const response = await this.sendTcpCommand({
+        type: "input",
+        action: args.action,
+        pressed: args.pressed !== false,
+      });
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(response),
+          },
+        ],
+      };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Unknown error";
+      return this.createErrorResponse(msg, [
+        "Ensure the game is running via run_interactive",
+      ]);
+    }
+  }
+
+  /**
+   * Handle game_state — query state from the running game.
+   */
+  private async handleGameState() {
+    try {
+      const response = await this.sendTcpCommand({ type: "get_state" });
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(response, null, 2),
+          },
+        ],
+      };
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Unknown error";
+      return this.createErrorResponse(msg, [
+        "Ensure the game is running via run_interactive",
+      ]);
+    }
+  }
+
+  /**
+   * Handle game_screenshot — capture screenshot from running game.
+   */
+  private async handleGameScreenshot(args: any) {
+    const outputPath =
+      args?.outputPath ||
+      (this.interactiveProjectPath
+        ? join(this.interactiveProjectPath, "screenshots", "capture.png")
+        : "capture.png");
+
+    try {
+      const response = await this.sendTcpCommand({
+        type: "screenshot",
+        output_path: outputPath,
+      });
+
+      if ((response as any).ok) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Screenshot captured from running game.\nSaved to: ${outputPath}\nSize: ${(response as any).size}`,
+            },
+          ],
+        };
+      }
+
+      return this.createErrorResponse(
+        `Screenshot failed: ${(response as any).error}`,
+        [],
+      );
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Unknown error";
+      return this.createErrorResponse(msg, [
+        "Ensure the game is running via run_interactive",
+      ]);
     }
   }
 

@@ -37,6 +37,14 @@ try {
   );
 
   console.log("Successfully copied run_and_capture.gd to build/scripts");
+
+  // Copy the input_receiver.gd file
+  fs.copyFileSync(
+    path.join(__dirname, "..", "src", "scripts", "input_receiver.gd"),
+    path.join(__dirname, "..", "build", "scripts", "input_receiver.gd"),
+  );
+
+  console.log("Successfully copied input_receiver.gd to build/scripts");
 } catch (error) {
   console.error("Error copying scripts:", error);
   process.exit(1);
