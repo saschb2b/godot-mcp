@@ -9,7 +9,15 @@
 
 import { fileURLToPath } from "url";
 import { join, dirname, basename, normalize } from "path";
-import { existsSync, readdirSync, readFileSync } from "fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+  unlinkSync,
+  copyFileSync,
+  mkdirSync,
+} from "fs";
 import { spawn, execFile } from "child_process";
 import { promisify } from "util";
 
@@ -740,10 +748,22 @@ class GodotServer {
         },
         {
           name: "get_debug_output",
-          description: "Get the current debug output and errors",
+          description:
+            "Get the current debug output and errors. Supports filtering by errors_only and tail to reduce output size.",
           inputSchema: {
             type: "object",
-            properties: {},
+            properties: {
+              errorsOnly: {
+                type: "boolean",
+                description:
+                  "If true, only return error/warning lines (default: false)",
+              },
+              tail: {
+                type: "number",
+                description:
+                  "Only return the last N lines of output/errors (default: all)",
+              },
+            },
             required: [],
           },
         },
@@ -1826,6 +1846,35 @@ class GodotServer {
             required: ["projectPath"],
           },
         },
+        {
+          name: "run_and_capture",
+          description:
+            "Run the Godot project for a specified duration, capture a screenshot, then stop. Useful for automated testing of runtime behavior and procedural content. Requires a display server.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              projectPath: {
+                type: "string",
+                description: "Path to the Godot project directory",
+              },
+              scene: {
+                type: "string",
+                description: "Optional: Specific scene to run",
+              },
+              duration: {
+                type: "number",
+                description:
+                  "How long to run the game in seconds before capturing (default: 3)",
+              },
+              outputPath: {
+                type: "string",
+                description:
+                  'Path where the screenshot PNG will be saved. Defaults to "<projectPath>/screenshots/capture.png".',
+              },
+            },
+            required: ["projectPath"],
+          },
+        },
       ],
     }));
 
@@ -1838,7 +1887,7 @@ class GodotServer {
         case "run_project":
           return await this.handleRunProject(request.params.arguments);
         case "get_debug_output":
-          return await this.handleGetDebugOutput();
+          return await this.handleGetDebugOutput(request.params.arguments);
         case "stop_project":
           return await this.handleStopProject();
         case "get_godot_version":
@@ -1915,6 +1964,8 @@ class GodotServer {
           );
         case "capture_screenshot":
           return await this.handleCaptureScreenshot(request.params.arguments);
+        case "run_and_capture":
+          return await this.handleRunAndCapture(request.params.arguments);
         default:
           throw new McpError(
             ErrorCode.MethodNotFound,
@@ -2115,12 +2166,32 @@ class GodotServer {
   /**
    * Handle the get_debug_output tool
    */
-  private handleGetDebugOutput() {
+  private handleGetDebugOutput(args?: any) {
     if (!this.activeProcess) {
       return this.createErrorResponse("No active Godot process.", [
         "Use run_project to start a Godot project first",
         "Check if the Godot process crashed unexpectedly",
       ]);
+    }
+
+    const errorsOnly = args?.errorsOnly === true;
+    const tail = typeof args?.tail === "number" ? args.tail : 0;
+
+    let output = this.activeProcess.output;
+    let errors = this.activeProcess.errors;
+
+    if (errorsOnly) {
+      // Filter output to only lines containing error/warning indicators
+      output = output.filter(
+        (line: string) =>
+          /ERROR|SCRIPT|WARNING|error:|Invalid/i.test(line) ||
+          /^\s+at:/.test(line),
+      );
+    }
+
+    if (tail > 0) {
+      output = output.slice(-tail);
+      errors = errors.slice(-tail);
     }
 
     return {
@@ -2129,8 +2200,8 @@ class GodotServer {
           type: "text",
           text: JSON.stringify(
             {
-              output: this.activeProcess.output,
-              errors: this.activeProcess.errors,
+              output,
+              errors,
             },
             null,
             2,
@@ -3336,6 +3407,21 @@ class GodotServer {
         args.projectPath,
       );
 
+      // Check if the script was attached successfully (via API or .tscn injection)
+      if (
+        stdout.includes("attached to node:") ||
+        stdout.includes("via .tscn injection")
+      ) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Script '${args.scriptPath}' attached to '${args.nodePath}'.\n\nOutput: ${stdout}`,
+            },
+          ],
+        };
+      }
+
       if (stderr.includes("Failed to")) {
         return this.createErrorResponse(`Failed to attach script: ${stderr}`, [
           "Check if the node path and script path are correct",
@@ -3351,6 +3437,22 @@ class GodotServer {
         ],
       };
     } catch (error: any) {
+      // executeOperation may throw even on success if Godot prints errors to stderr
+      // (e.g., autoload compilation warnings). Check if stdout contains success.
+      const stdout = error?.stdout ?? "";
+      if (
+        stdout.includes("attached to node:") ||
+        stdout.includes("via .tscn injection")
+      ) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Script '${args.scriptPath}' attached to '${args.nodePath}'.\n\nOutput: ${stdout}`,
+            },
+          ],
+        };
+      }
       return this.createErrorResponse(
         `Failed to attach script: ${error?.message ?? "Unknown error"}`,
         ["Ensure Godot is installed correctly"],
@@ -5123,6 +5225,182 @@ class GodotServer {
           "Check if the GODOT_PATH environment variable is set correctly",
         ],
       );
+    }
+  }
+
+  /**
+   * Handle the run_and_capture tool.
+   * Temporarily injects a capture autoload, runs the project, waits for it to
+   * self-quit after capturing, then cleans up.
+   */
+  private async handleRunAndCapture(args: any) {
+    args = this.normalizeParameters(args);
+
+    if (!args.projectPath) {
+      return this.createErrorResponse("Missing required parameter: projectPath", [
+        "Provide the path to the Godot project directory",
+      ]);
+    }
+
+    if (!this.validatePath(args.projectPath)) {
+      return this.createErrorResponse("Invalid project path", [
+        'Provide a valid path without ".."',
+      ]);
+    }
+
+    const projectFile = join(args.projectPath, "project.godot");
+    if (!existsSync(projectFile)) {
+      return this.createErrorResponse(
+        `Not a valid Godot project: ${args.projectPath}`,
+        ["Ensure the path contains a project.godot file"],
+      );
+    }
+
+    const duration = typeof args.duration === "number" ? args.duration : 3;
+    const outputPath =
+      args.outputPath || join(args.projectPath, "screenshots", "capture.png");
+
+    // Ensure output directory exists
+    const outputDir = dirname(outputPath);
+    if (!existsSync(outputDir)) {
+      mkdirSync(outputDir, { recursive: true });
+    }
+
+    // Copy the capture script into the project
+    const scriptFilename = ".mcp_run_and_capture.gd";
+    const scriptDest = join(args.projectPath, scriptFilename);
+    const captureScriptSrc = join(
+      dirname(fileURLToPath(import.meta.url)),
+      "scripts",
+      "run_and_capture.gd",
+    );
+    copyFileSync(captureScriptSrc, scriptDest);
+
+    // Write config file for the capture script to read
+    const configPath = join(args.projectPath, ".mcp_capture_config.json");
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        output_path: outputPath,
+        duration: duration,
+      }),
+    );
+
+    // Read project.godot and inject autoload
+    const projectContent = readFileSync(projectFile, "utf-8");
+    let modifiedContent: string;
+
+    if (projectContent.includes("[autoload]")) {
+      modifiedContent = projectContent.replace(
+        "[autoload]",
+        `[autoload]\n\n_McpCapture="*res://${scriptFilename}"`,
+      );
+    } else {
+      modifiedContent =
+        projectContent + `\n[autoload]\n\n_McpCapture="*res://${scriptFilename}"\n`;
+    }
+    writeFileSync(projectFile, modifiedContent);
+
+    try {
+      // Run the project (NOT headless — needs rendering)
+      const timeout = (duration + 15) * 1000; // duration + 15s buffer
+      const { stdout, stderr } = await execFileAsync(
+        this.godotPath!,
+        ["--path", args.projectPath],
+        { timeout },
+      );
+
+      // Check for capture success
+      if (stdout.includes("[INFO] Screenshot saved:")) {
+        const result = {
+          content: [
+            {
+              type: "text",
+              text: `Screenshot captured after ${duration}s of gameplay.\nSaved to: ${outputPath}\n\n${stdout}`,
+            },
+          ],
+        };
+        return result;
+      }
+
+      if (stderr.includes("[ERROR]")) {
+        return this.createErrorResponse(
+          `run_and_capture failed: ${stderr}`,
+          [
+            "Check if the project runs without errors",
+            "Ensure a display server is available",
+          ],
+        );
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Project ran for ${duration}s.\nOutput: ${stdout}\nErrors: ${stderr}`,
+          },
+        ],
+      };
+    } catch (error: unknown) {
+      const execError = error as Error & {
+        killed?: boolean;
+        signal?: string;
+        stderr?: string;
+        stdout?: string;
+      };
+
+      // Timeout is expected if the capture somehow didn't trigger quit
+      if (execError.killed || execError.signal === "SIGTERM") {
+        // Check if screenshot was saved before timeout
+        if (existsSync(outputPath)) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Screenshot captured (process timed out but file exists).\nSaved to: ${outputPath}`,
+              },
+            ],
+          };
+        }
+        return this.createErrorResponse(
+          "run_and_capture timed out without capturing a screenshot.",
+          [
+            "Try increasing the duration",
+            "Check if the project runs correctly",
+          ],
+        );
+      }
+
+      // execFile may throw but still have stdout with success info
+      if (execError.stdout?.includes("[INFO] Screenshot saved:")) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Screenshot captured after ${duration}s of gameplay.\nSaved to: ${outputPath}\n\n${execError.stdout}`,
+            },
+          ],
+        };
+      }
+
+      return this.createErrorResponse(
+        `run_and_capture failed: ${execError.message}`,
+        [
+          "Ensure Godot is installed correctly",
+          "Ensure a display server is available",
+        ],
+      );
+    } finally {
+      // Clean up: restore project.godot, remove temp files
+      writeFileSync(projectFile, projectContent);
+
+      try {
+        if (existsSync(scriptDest)) unlinkSync(scriptDest);
+      } catch { /* ignore cleanup errors */ }
+
+      try {
+        if (existsSync(configPath)) unlinkSync(configPath);
+      } catch { /* ignore cleanup errors */ }
     }
   }
 

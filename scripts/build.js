@@ -29,6 +29,14 @@ try {
   );
 
   console.log("Successfully copied capture_screenshot.gd to build/scripts");
+
+  // Copy the run_and_capture.gd file
+  fs.copyFileSync(
+    path.join(__dirname, "..", "src", "scripts", "run_and_capture.gd"),
+    path.join(__dirname, "..", "build", "scripts", "run_and_capture.gd"),
+  );
+
+  console.log("Successfully copied run_and_capture.gd to build/scripts");
 } catch (error) {
   console.error("Error copying scripts:", error);
   process.exit(1);

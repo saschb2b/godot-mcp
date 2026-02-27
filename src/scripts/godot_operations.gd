@@ -572,9 +572,11 @@ func add_node(params):
             print("Setting properties on node")
         var properties = params.properties
         for property in properties:
+            var value = properties[property]
+            value = _convert_property_value(new_node, property, value)
             if debug_mode:
-                print("Setting property: " + property + " = " + str(properties[property]))
-            new_node.set(property, properties[property])
+                print("Setting property: " + property + " = " + str(value))
+            new_node.set(property, value)
     
     parent.add_child(new_node)
     new_node.owner = scene_root
@@ -924,26 +926,47 @@ func set_node_properties(params):
     var properties = params.properties
     for property in properties:
         var value = properties[property]
-        # Handle array-to-vector conversion
-        if value is Array and value.size() == 2:
-            var prop_hint = _get_property_type(node, property)
-            if prop_hint == "Vector2" or prop_hint == "Vector2i":
-                if prop_hint == "Vector2i":
-                    value = Vector2i(int(value[0]), int(value[1]))
-                else:
-                    value = Vector2(value[0], value[1])
-        elif value is Array and value.size() == 3:
-            var prop_hint = _get_property_type(node, property)
-            if prop_hint == "Vector3" or prop_hint == "Vector3i":
-                if prop_hint == "Vector3i":
-                    value = Vector3i(int(value[0]), int(value[1]), int(value[2]))
-                else:
-                    value = Vector3(value[0], value[1], value[2])
+        value = _convert_property_value(node, property, value)
         node.set(property, value)
         log_debug("Set " + property + " = " + str(value))
 
     _save_scene(scene_root, absolute_scene_path)
     print("Properties set successfully on node: " + params.node_path)
+
+func _convert_property_value(node, property: String, value):
+    """Convert JSON values (arrays/dicts) to Godot types based on the node's property type."""
+    if value is Array:
+        if value.size() == 2:
+            var prop_type = _get_property_type(node, property)
+            if prop_type == "Vector2":
+                return Vector2(value[0], value[1])
+            elif prop_type == "Vector2i":
+                return Vector2i(int(value[0]), int(value[1]))
+        elif value.size() == 3:
+            var prop_type = _get_property_type(node, property)
+            if prop_type == "Vector3":
+                return Vector3(value[0], value[1], value[2])
+            elif prop_type == "Vector3i":
+                return Vector3i(int(value[0]), int(value[1]), int(value[2]))
+            elif prop_type == "Color":
+                return Color(value[0], value[1], value[2])
+        elif value.size() == 4:
+            var prop_type = _get_property_type(node, property)
+            if prop_type == "Color":
+                return Color(value[0], value[1], value[2], value[3])
+            elif prop_type == "Rect2":
+                return Rect2(value[0], value[1], value[2], value[3])
+            elif prop_type == "Rect2i":
+                return Rect2i(int(value[0]), int(value[1]), int(value[2]), int(value[3]))
+    elif value is Dictionary:
+        if value.has("r") and value.has("g") and value.has("b"):
+            return Color(value.r, value.g, value.b, value.get("a", 1.0))
+        elif value.has("x") and value.has("y"):
+            if value.has("z"):
+                return Vector3(value.x, value.y, value.z)
+            else:
+                return Vector2(value.x, value.y)
+    return value
 
 func _get_property_type(node, property_name: String) -> String:
     for prop in node.get_property_list():
@@ -957,29 +980,131 @@ func _get_property_type(node, property_name: String) -> String:
                     return "Vector3"
                 TYPE_VECTOR3I:
                     return "Vector3i"
+                TYPE_COLOR:
+                    return "Color"
+                TYPE_RECT2:
+                    return "Rect2"
+                TYPE_RECT2I:
+                    return "Rect2i"
     return ""
 
-# Attach a script to a node
+# Attach a script to a node.
+# Always uses direct .tscn text manipulation to avoid compilation issues
+# with scripts that reference autoloads (not available in headless mode).
 func attach_script(params):
-    var result = _load_scene(params)
-    var scene_root = result[0]
-    var absolute_scene_path = result[2]
-
-    var node = _find_node(scene_root, params.node_path)
-
     var full_script_path = params.script_path
     if not full_script_path.begins_with("res://"):
         full_script_path = "res://" + full_script_path
 
-    var script = load(full_script_path)
-    if not script:
-        printerr("Failed to load script: " + full_script_path)
-        quit(1)
-
-    node.set_script(script)
-
-    _save_scene(scene_root, absolute_scene_path)
+    var scene_res_path = _resolve_scene_path(params)
+    var absolute_scene_path = ProjectSettings.globalize_path(scene_res_path)
+    _attach_script_via_tscn(absolute_scene_path, params.node_path, full_script_path)
     print("Script '" + params.script_path + "' attached to node: " + params.node_path)
+
+func _resolve_scene_path(params) -> String:
+    var scene_path = params.scene_path
+    if not scene_path.begins_with("res://"):
+        scene_path = "res://" + scene_path
+    return scene_path
+
+func _attach_script_via_tscn(scene_path: String, node_path: String, script_res_path: String) -> void:
+    """Directly edit the .tscn file to add a script reference when load() fails."""
+    var file = FileAccess.open(scene_path, FileAccess.READ)
+    if not file:
+        printerr("Failed to open scene file: " + scene_path)
+        quit(1)
+    var content = file.get_as_text()
+    file.close()
+
+    var lines = content.split("\n")
+
+    # Find the highest ext_resource id
+    var max_id = 0
+    for line in lines:
+        if line.begins_with("[ext_resource"):
+            var id_start = line.find("id=\"") + 4
+            if id_start > 3:
+                var id_end = line.find("\"", id_start)
+                var id_str = line.substr(id_start, id_end - id_start)
+                # IDs can be like "1_abc" or just "1"
+                var num_part = id_str.split("_")[0]
+                if num_part.is_valid_int():
+                    max_id = maxi(max_id, int(num_part))
+    var new_id = str(max_id + 1)
+
+    # Build the ext_resource line
+    var ext_resource_line = "[ext_resource type=\"Script\" path=\"" + script_res_path + "\" id=\"" + new_id + "\"]"
+
+    # Find where to insert the ext_resource (after load_steps or other ext_resources)
+    var insert_idx = -1
+    var load_steps_line_idx = -1
+    for i in lines.size():
+        if lines[i].begins_with("[ext_resource"):
+            insert_idx = i + 1
+        elif lines[i].begins_with("[gd_scene"):
+            load_steps_line_idx = i
+            if insert_idx == -1:
+                insert_idx = i + 1
+
+    # Update load_steps count
+    if load_steps_line_idx >= 0:
+        var ls_line = lines[load_steps_line_idx]
+        if "load_steps=" in ls_line:
+            var ls_start = ls_line.find("load_steps=") + 11
+            var ls_end = ls_line.find(" ", ls_start)
+            if ls_end == -1:
+                ls_end = ls_line.find("]", ls_start)
+            var old_count = int(ls_line.substr(ls_start, ls_end - ls_start))
+            lines[load_steps_line_idx] = ls_line.replace("load_steps=" + str(old_count), "load_steps=" + str(old_count + 1))
+        else:
+            # Add load_steps
+            lines[load_steps_line_idx] = ls_line.replace("format=3", "load_steps=2 format=3")
+
+    # Insert the ext_resource line
+    lines.insert(insert_idx, ext_resource_line)
+
+    # Determine the node header to find in the .tscn
+    var node_header = ""
+    if node_path == "root" or node_path == ".":
+        # Root node: find first [node line without parent=
+        for i in lines.size():
+            if lines[i].begins_with("[node ") and "parent=" not in lines[i]:
+                node_header = lines[i]
+                # Add script property right after the node header
+                var script_line = "script = ExtResource(\"" + new_id + "\")"
+                # Check if next line is empty or another property
+                if i + 1 < lines.size() and lines[i + 1] == "":
+                    lines.insert(i + 1, script_line)
+                else:
+                    lines.insert(i + 1, script_line)
+                break
+    else:
+        # Non-root node: find [node name="X" ... parent="Y"]
+        var target_name = node_path.get_file()  # Last part of path
+        var target_parent = "."
+        if "/" in node_path.replace("root/", ""):
+            var stripped = node_path.replace("root/", "")
+            target_parent = stripped.get_base_dir()
+            if target_parent == "":
+                target_parent = "."
+            target_name = stripped.get_file()
+
+        for i in lines.size():
+            if lines[i].begins_with("[node ") and "name=\"" + target_name + "\"" in lines[i]:
+                var script_line = "script = ExtResource(\"" + new_id + "\")"
+                if i + 1 < lines.size() and lines[i + 1] == "":
+                    lines.insert(i + 1, script_line)
+                else:
+                    lines.insert(i + 1, script_line)
+                break
+
+    # Write back
+    var out_file = FileAccess.open(scene_path, FileAccess.WRITE)
+    if not out_file:
+        printerr("Failed to write scene file: " + scene_path)
+        quit(1)
+    out_file.store_string("\n".join(lines))
+    out_file.close()
 
 # Create a .tres resource file
 func create_resource(params):
