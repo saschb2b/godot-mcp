@@ -32,9 +32,235 @@
           G O D O T    x    M O D E L   C O N T E X T   P R O T O C O L
 ```
 
-A [Model Context Protocol](https://modelcontextprotocol.io/introduction) server that gives AI assistants full control over the Godot game engine. Build scenes, write scripts, run games, send input, capture screenshots, and query game state -- all through MCP tools.
+An MCP server that gives AI assistants full control over the Godot game engine. Build scenes, write scripts, run games, send input, capture screenshots, and query game state -- all through natural language.
 
-> Fork of [Coding-Solo/godot-mcp](https://github.com/Coding-Solo/godot-mcp), significantly extended with interactive game control, persistent TCP communication, script authoring, and more.
+> Fork of [Coding-Solo/godot-mcp](https://github.com/Coding-Solo/godot-mcp), extended with interactive game control, persistent TCP communication, script authoring, and more.
+
+## How It Works
+
+**MCP (Model Context Protocol)** is a standard that lets AI assistants use external tools. Think of it like a USB port -- your AI plugs into this server and gains the ability to control Godot.
+
+```
+You (natural language) --> AI Assistant --> MCP Server --> Godot Engine
+    "Add a player to           |              |              |
+     the scene"            interprets     calls tool     creates node
+                           your request   add_node()     in .tscn file
+```
+
+You talk to your AI assistant normally. When it needs to do something in Godot, it calls one of the 45 tools this server provides. **You don't write any code yourself** -- the AI handles that.
+
+## Quickstart
+
+### Prerequisites
+
+Before you start, make sure you have these installed:
+
+1. **Godot Engine 4.x** -- [Download here](https://godotengine.org/download). Install it and note the full path to the executable.
+   - Windows: e.g., `C:/Program Files (x86)/Godot/Godot_v4.4-stable_win64.exe`
+   - macOS: e.g., `/Applications/Godot.app/Contents/MacOS/Godot`
+   - Linux: e.g., `/usr/local/bin/godot4`
+2. **Node.js 18+** -- [Download here](https://nodejs.org/). This runs the MCP server.
+3. **pnpm** -- Install with `npm install -g pnpm` (or `corepack enable` if using Node 18+).
+4. **An MCP-compatible AI assistant** -- See [Supported Clients](#supported-clients) below.
+
+### Step 1: Clone and Build
+
+```bash
+git clone https://github.com/Vollkorn-Games/godot-mcp.git
+cd godot-mcp
+pnpm install
+pnpm run build
+```
+
+After building, note the **full path** to `build/index.js` inside the cloned folder. You'll need it in the next step.
+
+### Step 2: Configure Your AI Assistant
+
+Add the MCP server to your AI assistant's config. Every config needs two things:
+
+1. The command to start the server (`node` + path to `build/index.js`)
+2. The `GODOT_PATH` environment variable pointing to your Godot executable
+
+Pick your assistant below and copy the config.
+
+---
+
+<details>
+<summary><strong>Claude Code</strong></summary>
+
+Run this command in your terminal:
+
+```bash
+claude mcp add godot -- node /absolute/path/to/godot-mcp/build/index.js
+```
+
+Or add to your MCP settings JSON (`~/.claude/settings.json` or project-level `.mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "godot": {
+      "command": "node",
+      "args": ["/absolute/path/to/godot-mcp/build/index.js"],
+      "env": {
+        "GODOT_PATH": "/absolute/path/to/godot/executable"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>Cline (VS Code)</strong></summary>
+
+Open the Cline MCP settings (Cline sidebar > MCP Servers > Configure) and add:
+
+```json
+{
+  "mcpServers": {
+    "godot": {
+      "command": "node",
+      "args": ["/absolute/path/to/godot-mcp/build/index.js"],
+      "env": {
+        "GODOT_PATH": "/absolute/path/to/godot/executable"
+      },
+      "disabled": false
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>Cursor</strong></summary>
+
+Go to **Settings** > **Features** > **MCP** > **+ Add New MCP Server**:
+
+- Name: `godot`
+- Type: `command`
+- Command: `node /absolute/path/to/godot-mcp/build/index.js`
+
+Then set the environment variable `GODOT_PATH` in your system or shell profile.
+
+</details>
+
+<details>
+<summary><strong>Other MCP Clients (Open WebUI, LM Studio, etc.)</strong></summary>
+
+Any application that supports MCP can use this server. The connection always works the same way:
+
+- **Transport**: stdio (the AI launches the server as a subprocess)
+- **Command**: `node /absolute/path/to/godot-mcp/build/index.js`
+- **Environment variables**: `GODOT_PATH=/absolute/path/to/godot/executable`
+
+Check your client's documentation for where to add MCP server configs. Look for terms like "MCP", "tools", or "tool servers".
+
+</details>
+
+---
+
+**Windows paths example** (replace with your actual paths):
+
+```json
+{
+  "godot": {
+    "command": "node",
+    "args": ["C:/Users/you/godot-mcp/build/index.js"],
+    "env": {
+      "GODOT_PATH": "C:/Program Files (x86)/Godot/Godot_v4.4-stable_win64.exe"
+    }
+  }
+}
+```
+
+> Use forward slashes `/` even on Windows -- JSON doesn't handle backslashes well.
+
+### Step 3: Test It
+
+Open your AI assistant and try:
+
+> "Use the get_godot_version tool to check if the MCP server is connected."
+
+If it returns a version number, everything is working. Now try:
+
+> "Create a new Godot project at C:/Users/you/my-game with a Node2D main scene."
+
+## Supported Clients
+
+MCP is an open standard. Any AI assistant that supports MCP can use this server:
+
+| Client                                                        | MCP Support | Notes                                        |
+| ------------------------------------------------------------- | ----------- | -------------------------------------------- |
+| [Claude Code](https://docs.anthropic.com/en/docs/claude-code) | Built-in    | First-class MCP support via `claude mcp add` |
+| [Cline](https://github.com/cline/cline)                       | Built-in    | VS Code extension, configure in sidebar      |
+| [Cursor](https://cursor.sh)                                   | Built-in    | Settings > Features > MCP                    |
+| [Windsurf](https://windsurf.com)                              | Built-in    | Settings > MCP                               |
+| [Continue](https://continue.dev)                              | Built-in    | config.json MCP section                      |
+| [LM Studio](https://lmstudio.ai)                              | Plugin      | Check MCP plugin availability                |
+
+### Using with Local LLMs (LlamaCPP, Ollama, etc.)
+
+You **don't connect the LLM to the MCP server directly**. Instead, you need an MCP client (an app that speaks the MCP protocol) sitting between your LLM and the MCP server:
+
+```
+Your local LLM (LlamaCPP)  -->  MCP Client (e.g., Cline)  -->  Godot MCP Server
+   runs on localhost:8080        handles tool calls               controls Godot
+```
+
+Here's how to set it up with **LlamaCPP + Cline** (the easiest path):
+
+**1. Start LlamaCPP with a tool-capable model**
+
+```bash
+llama-server -m your-model.gguf --port 8080
+```
+
+> Use a model that supports function/tool calling (e.g., Qwen 2.5, Mistral, Llama 3.1+). Smaller models may struggle with complex tool use.
+
+**2. Install Cline in VS Code**
+
+Install the [Cline extension](https://marketplace.visualstudio.com/items?itemName=saoudrizwan.claude-dev) from the VS Code marketplace.
+
+**3. Point Cline to your local LLM**
+
+In Cline settings, configure the API provider:
+
+- **API Provider**: OpenAI Compatible
+- **Base URL**: `http://localhost:8080/v1`
+- **API Key**: `not-needed` (any non-empty string)
+- **Model ID**: the model name your server reports
+
+**4. Add the Godot MCP server to Cline**
+
+Open the Cline sidebar > MCP Servers > Configure, and add:
+
+```json
+{
+  "mcpServers": {
+    "godot": {
+      "command": "node",
+      "args": ["/absolute/path/to/godot-mcp/build/index.js"],
+      "env": {
+        "GODOT_PATH": "/absolute/path/to/godot/executable"
+      },
+      "disabled": false
+    }
+  }
+}
+```
+
+**5. Test it**
+
+Ask Cline: _"Use the get_godot_version tool"_ -- if it returns a version, the full chain is working.
+
+**Other local LLM setups:**
+
+- **Ollama**: Same as above, but base URL is `http://localhost:11434/v1`
+- **LM Studio**: Has built-in MCP support via plugins -- check their docs
+- **Custom client**: Implement the [MCP client spec](https://modelcontextprotocol.io/introduction) yourself -- the server uses stdio transport and doesn't care what LLM is behind the client
 
 ## What Can It Do?
 
@@ -105,7 +331,7 @@ This isn't just "launch editor and read logs". The MCP server can **build an ent
 | `get_uid` / `update_project_uids` | UID management (Godot 4.4+) |
 | `export_project` | Export for target platform using presets |
 
-**Interactive Game Control** (the big one)
+**Interactive Game Control**
 | Tool | Description |
 |------|-------------|
 | `run_interactive` | Start game with injected TCP input receiver |
@@ -126,70 +352,18 @@ The standout feature. `run_interactive` injects a TCP server into the running ga
 
 The TCP connection is persistent (single socket reused across commands). Everything is cleaned up automatically when the game stops -- the injected autoload is removed and `project.godot` is restored.
 
-## Requirements
-
-- [Godot Engine](https://godotengine.org/download) 4.x installed on your system
-- Node.js 18+ and pnpm
-- An MCP-compatible AI assistant (Claude Code, Cline, Cursor, etc.)
-
-## Installation
-
-```bash
-git clone https://github.com/saschb2b/godot-mcp.git
-cd godot-mcp
-pnpm install
-pnpm run build
-```
-
-### Configure with Claude Code
-
-Add to your Claude Code MCP settings:
-
-```json
-{
-  "mcpServers": {
-    "godot": {
-      "command": "node",
-      "args": ["/absolute/path/to/godot-mcp/build/index.js"]
-    }
-  }
-}
-```
-
-### Configure with Cline
-
-Add to your Cline MCP settings:
-
-```json
-{
-  "mcpServers": {
-    "godot": {
-      "command": "node",
-      "args": ["/absolute/path/to/godot-mcp/build/index.js"],
-      "disabled": false
-    }
-  }
-}
-```
-
-### Configure with Cursor
-
-Go to **Settings** > **Features** > **MCP** > **+ Add New MCP Server**:
-
-- Name: `godot`
-- Type: `command`
-- Command: `node /absolute/path/to/godot-mcp/build/index.js`
-
-### Environment Variables
+## Environment Variables
 
 | Variable     | Description                                         |
 | ------------ | --------------------------------------------------- |
 | `GODOT_PATH` | Path to Godot executable (overrides auto-detection) |
 | `DEBUG`      | Set to `"true"` for verbose server logging          |
 
+The server tries to auto-detect Godot in common install locations. If it can't find it, set `GODOT_PATH` explicitly.
+
 ## Architecture
 
-The server uses two execution strategies:
+The server uses three execution strategies:
 
 1. **Direct CLI** -- Simple operations (launch editor, get version, read files) call Godot CLI commands or manipulate files directly from TypeScript.
 2. **Bundled GDScript** -- Complex scene operations use `godot_operations.gd`, a comprehensive script that runs via `godot --headless --script` to manipulate scene trees, nodes, and resources through the Godot API.
@@ -197,13 +371,25 @@ The server uses two execution strategies:
 
 ## Troubleshooting
 
-| Problem                         | Solution                                              |
-| ------------------------------- | ----------------------------------------------------- |
-| Godot not found                 | Set `GODOT_PATH` environment variable                 |
-| Connection issues               | Restart your AI assistant to reconnect MCP            |
-| Invalid project path            | Ensure path contains a `project.godot` file           |
-| Interactive mode not responding | Check that port 9876 is not in use by another process |
-| Build errors                    | Run `pnpm install` then `pnpm run build`              |
+| Problem                         | Solution                                                         |
+| ------------------------------- | ---------------------------------------------------------------- |
+| "Godot not found"               | Set `GODOT_PATH` env variable to the full path of the executable |
+| Tools not showing up            | Restart your AI assistant after adding the MCP config            |
+| "Not a valid Godot project"     | Ensure the path you give contains a `project.godot` file         |
+| Interactive mode not responding | Check that port 9876 is not in use by another process            |
+| Build errors after cloning      | Run `pnpm install` then `pnpm run build`                         |
+| Permission errors (macOS/Linux) | Make sure `node` and the Godot binary are executable             |
+
+## Contributing
+
+```bash
+pnpm install
+pnpm run build
+pnpm test           # run all tests
+pnpm lint           # eslint
+pnpm format:check   # prettier
+pnpm typecheck      # tsc --noEmit
+```
 
 ## License
 
