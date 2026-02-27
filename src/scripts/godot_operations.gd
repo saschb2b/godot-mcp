@@ -2540,27 +2540,29 @@ func get_node_insights(params):
     if not signal_defs.is_empty():
         insights["signals_defined"] = signal_defs
 
-    # Track signal emissions
+    # Track signal emissions with line numbers
     var emissions: Array = []
-    for line in lines:
-        var stripped := line.strip_edges()
+    for i in lines.size():
+        var stripped: String = lines[i].strip_edges()
         if ".emit(" in stripped or "emit_signal(" in stripped:
-            emissions.append(stripped)
+            emissions.append({"line": i + 1, "code": stripped})
     if not emissions.is_empty():
         insights["signal_emissions"] = emissions
 
-    # Track dependencies (preload, load)
+    # Track dependencies (preload, load, ClassDB)
     var dependencies: Array = []
-    for line in lines:
-        var stripped := line.strip_edges()
+    for i in lines.size():
+        var stripped: String = lines[i].strip_edges()
         if "preload(" in stripped or "load(" in stripped:
-            # Extract the path
             var start_idx := stripped.find("(\"")
             var end_idx := stripped.find("\")", start_idx)
             if start_idx >= 0 and end_idx >= 0:
                 var dep_path := stripped.substr(start_idx + 2, end_idx - start_idx - 2)
                 var dep_type := "preload" if "preload(" in stripped else "load"
-                dependencies.append({"path": dep_path, "type": dep_type})
+                dependencies.append({"path": dep_path, "type": dep_type, "line": i + 1})
+        if "ClassDB." in stripped:
+            var dep_entry := {"type": "ClassDB", "line": i + 1, "code": stripped}
+            dependencies.append(dep_entry)
     if not dependencies.is_empty():
         insights["dependencies"] = dependencies
 
