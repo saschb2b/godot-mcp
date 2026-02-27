@@ -266,7 +266,7 @@ Ask Cline: _"Use the get_godot_version tool"_ -- if it returns a version, the fu
 
 This isn't just "launch editor and read logs". The MCP server can **build an entire game from scratch** -- create scenes, add and configure nodes, write GDScript files, wire up signals, set up tilemaps, then **run the game, play it via input commands, and observe the results through screenshots and state queries**.
 
-### 45 Tools Across 7 Categories
+### 47 Tools Across 7 Categories
 
 **Project & Editor**
 | Tool | Description |
@@ -337,6 +337,8 @@ This isn't just "launch editor and read logs". The MCP server can **build an ent
 | `run_interactive` | Start game with injected TCP input receiver |
 | `send_input` | Send input actions to the running game (move, jump, attack...) |
 | `game_state` | Query live game state (HP, score, position, level, etc.) |
+| `call_method` | Invoke a method on a live node (e.g., `player.take_damage(10)`) |
+| `find_nodes` | Search the runtime scene tree by name pattern and/or type |
 | `game_screenshot` | Capture the live game viewport as PNG |
 | `run_and_capture` | Run game for N seconds, capture screenshot, stop |
 | `capture_screenshot` | Render a scene to PNG (static, no runtime) |
@@ -347,8 +349,10 @@ The standout feature. `run_interactive` injects a TCP server into the running ga
 
 1. **Send inputs** -- `send_input(action: "move_right")` triggers the same input events as a real keypress
 2. **Query state** -- `game_state()` returns health, score, turn, level, player position, game over status
-3. **Take screenshots** -- `game_screenshot()` captures the live viewport with all runtime rendering
-4. **Play the game** -- chain inputs and state queries to navigate levels, fight enemies, test mechanics
+3. **Call methods** -- `call_method(nodePath: "Player", method: "take_damage", args: [10])` invokes any method on a live node
+4. **Find nodes** -- `find_nodes(pattern: "Enemy*", typeFilter: "CharacterBody2D")` searches the runtime scene tree
+5. **Take screenshots** -- `game_screenshot()` captures the live viewport with all runtime rendering
+6. **Play the game** -- chain inputs, method calls, and state queries to navigate levels, test mechanics, debug issues
 
 The TCP connection is persistent (single socket reused across commands). Everything is cleaned up automatically when the game stops -- the injected autoload is removed and `project.godot` is restored.
 

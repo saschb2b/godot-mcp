@@ -21,7 +21,7 @@ Do not commit code that fails any of these checks. CI runs all five on every pus
 | Command             | What it does                                       |
 | ------------------- | -------------------------------------------------- |
 | `pnpm build`        | TypeScript compile + copy GDScript files to build/ |
-| `pnpm test`         | Run all 56 vitest tests (requires Godot installed) |
+| `pnpm test`         | Run all vitest tests (requires Godot installed)    |
 | `pnpm lint`         | ESLint with strict TypeScript checking             |
 | `pnpm format:check` | Prettier formatting check                          |
 | `pnpm typecheck`    | `tsc --noEmit`                                     |
@@ -59,3 +59,17 @@ Do not commit code that fails any of these checks. CI runs all five on every pus
 - Always `validatePath()` user-provided paths before filesystem access
 - Error responses use `createErrorResponse()` with helpful `possibleSolutions`
 - Use `killProcess()` (awaits exit) instead of bare `.kill()` for process cleanup
+
+## When Adding or Removing Tools
+
+Every new tool must be reflected in **all** of:
+
+1. **GDScript** (if TCP-based): Add command handler in `src/scripts/input_receiver.gd`
+2. **Handler**: Add function in the appropriate `src/handlers/*.ts` file
+3. **Tool definition**: Add schema in `src/tool-definitions.ts`
+4. **Router**: Wire the handler in `src/tool-router.ts`
+5. **Tests**: Add at least parameter validation tests in `test/integration/`
+6. **README.md**: Update the tool count heading and the relevant tool table
+7. **TODO.md**: Check off the item if it was planned
+
+Do not commit a new tool without updating README and adding tests.
