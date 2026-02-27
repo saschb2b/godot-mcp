@@ -76,6 +76,26 @@
 - [x] **Interactive game control** — `send_input`, `run_interactive`, `game_state`, `game_screenshot` tools. (Upstream [#68](https://github.com/Coding-Solo/godot-mcp/issues/68))
 - [x] **Script binding & runtime tree** — `attach_script`, `game_state`, `edit_project_settings` cover these needs. (Upstream [#57](https://github.com/Coding-Solo/godot-mcp/issues/57))
 
+## Round 7 — Runtime Introspection (extend existing TCP protocol)
+
+Inspired by upstream [PR #72](https://github.com/Coding-Solo/godot-mcp/pull/72). Rather than adding a separate WebSocket bridge, extend our existing `input_receiver.gd` TCP protocol to support these commands.
+
+### High Value
+
+- [ ] **`call_method`** — Invoke a method on a live node by path (e.g., `player.take_damage(10)`). Powerful for testing game logic at runtime.
+- [ ] **`evaluate_expression`** — Execute arbitrary GDScript expression at runtime and return the result. Useful for debugging and one-off queries.
+- [ ] **`find_nodes`** — Search the live runtime scene tree by name/type pattern. Useful for verifying spawned entities, finding nodes dynamically.
+
+### Medium Value
+
+- [ ] **`send_key` / `send_mouse_click` / `send_mouse_drag`** — Granular input simulation (keyboard keys, mouse clicks at coordinates, drag operations). Our `send_input` only supports named actions.
+- [ ] **`wait_for_signal` / `wait_for_node`** — Block until a signal is emitted or a node appears in the tree. Useful for sequencing test steps.
+- [ ] **`get_performance_metrics`** — Retrieve FPS, draw calls, memory usage, etc. via `Performance` singleton. Useful for optimization workflows.
+
+### Lower Value
+
+- [ ] **`reset_scene`** — Reload the current scene at runtime. Niche but handy for test loops.
+
 ### Future Considerations
 
 - [ ] **`run_tests` (GUT support)** — Run GUT (Godot Unit Test) tests via headless Godot and return structured results. Lets the AI write game logic, run tests, and iterate. (Upstream [#29](https://github.com/Coding-Solo/godot-mcp/issues/29))
