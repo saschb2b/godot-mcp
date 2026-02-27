@@ -21,6 +21,14 @@ try {
   );
 
   console.log("Successfully copied godot_operations.gd to build/scripts");
+
+  // Copy the capture_screenshot.gd file
+  fs.copyFileSync(
+    path.join(__dirname, "..", "src", "scripts", "capture_screenshot.gd"),
+    path.join(__dirname, "..", "build", "scripts", "capture_screenshot.gd"),
+  );
+
+  console.log("Successfully copied capture_screenshot.gd to build/scripts");
 } catch (error) {
   console.error("Error copying scripts:", error);
   process.exit(1);

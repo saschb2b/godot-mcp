@@ -103,6 +103,8 @@ This direct feedback loop helps AI assistants like Claude understand what works 
 - **Validation & Export**:
   - Validate scenes for common issues (missing scripts, textures, shapes)
   - Export projects for target platforms using configured presets
+- **Visual Feedback**:
+  - Capture screenshots of scenes (renders viewport to PNG for AI visual inspection)
 - **UID Management** (for Godot 4.4+):
   - Get UID for specific files
   - Update UID references by resaving resources
@@ -180,7 +182,8 @@ Add to your Cline MCP settings file (`~/Library/Application Support/Code/User/gl
         "get_node_properties",
         "create_animation_player",
         "manage_autoloads",
-        "set_collision_layer_mask"
+        "set_collision_layer_mask",
+        "capture_screenshot"
       ]
     }
   }

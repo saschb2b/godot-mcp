@@ -41,3 +41,7 @@
 - [x] **`create_animation_player`** — Create AnimationPlayer node with pre-configured animations.
 - [x] **`manage_autoloads`** — Add, remove, or list autoload singletons in project.godot.
 - [x] **`set_collision_layer_mask`** — Set collision layers/masks using layer numbers or raw bitmask.
+
+## Round 3 — Visual Feedback
+
+- [x] **`capture_screenshot`** — Render a scene and capture the viewport as a PNG screenshot for visual feedback.
