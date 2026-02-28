@@ -50,7 +50,7 @@ class _McpLogger extends Logger:
 			var frames: Array = []
 			for i in bt.get_frame_count():
 				frames.append({
-					"file": bt.get_frame_source_file(i),
+					"file": bt.get_frame_file(i),
 					"line": bt.get_frame_line(i),
 					"function": bt.get_frame_function(i),
 				})
@@ -301,15 +301,27 @@ func _handle_evaluate_expression(data: Dictionary) -> void:
 		_send_response({"error": "Missing expression"})
 		return
 
+	# Collect autoload singletons as named inputs so expressions can reference them
+	var input_names: PackedStringArray = PackedStringArray()
+	var input_values: Array = []
+	for child in get_tree().root.get_children():
+		# Skip scene root and internal nodes (like this receiver)
+		if child == get_tree().current_scene:
+			continue
+		if child.name.begins_with("_"):
+			continue
+		input_names.append(child.name)
+		input_values.append(child)
+
 	var expression := Expression.new()
-	var parse_err := expression.parse(expr_str)
+	var parse_err := expression.parse(expr_str, input_names)
 	if parse_err != OK:
 		_send_response({"error": "Parse error: " + expression.get_error_text()})
 		return
 
 	var scene := get_tree().current_scene
 	var base_instance: Object = scene if scene else self
-	var result = expression.execute([], base_instance)
+	var result = expression.execute(input_values, base_instance)
 	if expression.has_execute_failed():
 		_send_response({"error": "Execution error: " + expression.get_error_text()})
 		return
