@@ -533,3 +533,185 @@ export async function handleGameScreenshot(
     ]);
   }
 }
+
+export async function handleSendKeySequence(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  if (!args?.keys || !Array.isArray(args.keys)) {
+    return createErrorResponse("Missing required parameter: keys", [
+      'Provide an array of key names and/or wait objects (e.g., ["a", "b", {"wait": 500}])',
+    ]);
+  }
+
+  try {
+    // Estimate timeout from sequence content
+    const estimatedMs = args.keys.reduce((acc: number, k: unknown) => {
+      if (typeof k === "object" && k !== null && "wait" in k)
+        return acc + (k as { wait: number }).wait;
+      return acc + (args.delayMs ?? args.delay_ms ?? 50);
+    }, 0);
+
+    const response = await sendTcpCommand(
+      ctx,
+      {
+        type: "send_key_sequence",
+        keys: args.keys,
+        delay_ms: args.delayMs ?? args.delay_ms ?? 50,
+      },
+      Math.max(estimatedMs + 5000, 10000),
+    );
+    return {
+      content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return createErrorResponse(msg, [
+      "Ensure the game is running via run_interactive",
+    ]);
+  }
+}
+
+export async function handlePauseGame(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  try {
+    const response = await sendTcpCommand(ctx, {
+      type: "pause_game",
+      paused: args?.paused !== false,
+    });
+    return {
+      content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return createErrorResponse(msg, [
+      "Ensure the game is running via run_interactive",
+    ]);
+  }
+}
+
+export async function handleSetProperty(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  if (!args?.node_path && !args?.nodePath) {
+    return createErrorResponse("Missing required parameter: nodePath", [
+      'Provide the path to the target node (e.g., "Player")',
+    ]);
+  }
+  if (!args?.property) {
+    return createErrorResponse("Missing required parameter: property", [
+      'Provide the property name (e.g., "score", "position")',
+    ]);
+  }
+  if (args?.value === undefined) {
+    return createErrorResponse("Missing required parameter: value", [
+      "Provide the value to set",
+    ]);
+  }
+
+  try {
+    const response = await sendTcpCommand(ctx, {
+      type: "set_property",
+      node_path: args.node_path ?? args.nodePath,
+      property: args.property,
+      value: args.value,
+    });
+    return {
+      content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return createErrorResponse(msg, [
+      "Ensure the game is running via run_interactive",
+    ]);
+  }
+}
+
+export async function handleExecuteScript(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  if (!args?.code) {
+    return createErrorResponse("Missing required parameter: code", [
+      'Provide GDScript code to execute (e.g., "var p = $Player\\nreturn p.position")',
+    ]);
+  }
+
+  try {
+    const response = await sendTcpCommand(
+      ctx,
+      {
+        type: "execute_script",
+        code: args.code,
+      },
+      15000,
+    );
+    return {
+      content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return createErrorResponse(msg, [
+      "Ensure the game is running via run_interactive",
+    ]);
+  }
+}
+
+export async function handleSubscribeSignals(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  if (!args?.node_path && !args?.nodePath) {
+    return createErrorResponse("Missing required parameter: nodePath", [
+      'Provide the path to the node (e.g., "Player", "/root/EventBus")',
+    ]);
+  }
+  if (
+    !args?.signals ||
+    !Array.isArray(args.signals) ||
+    args.signals.length === 0
+  ) {
+    return createErrorResponse("Missing required parameter: signals", [
+      'Provide an array of signal names (e.g., ["died", "health_changed"])',
+    ]);
+  }
+
+  try {
+    const response = await sendTcpCommand(ctx, {
+      type: "subscribe_signals",
+      node_path: args.node_path ?? args.nodePath,
+      signals: args.signals,
+    });
+    return {
+      content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return createErrorResponse(msg, [
+      "Ensure the game is running via run_interactive",
+    ]);
+  }
+}
+
+export async function handleGetSignalEvents(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  try {
+    const command: Record<string, unknown> = { type: "get_signal_events" };
+    if (args?.clear === false) command.clear = false;
+
+    const response = await sendTcpCommand(ctx, command);
+    return {
+      content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return createErrorResponse(msg, [
+      "Ensure the game is running via run_interactive",
+    ]);
+  }
+}

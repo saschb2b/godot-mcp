@@ -105,6 +105,8 @@ func _init():
             add_animation(params)
         "read_script":
             read_script(params)
+        "validate_script":
+            validate_script(params)
         "set_custom_tile_data":
             set_custom_tile_data(params)
         "duplicate_node":
@@ -2108,6 +2110,31 @@ func read_script(params):
     var content = file.get_as_text()
     file.close()
     print(content)
+
+
+func validate_script(params):
+    var script_path = params.script_path
+    if not script_path.begins_with("res://"):
+        script_path = "res://" + script_path
+
+    var absolute_path = ProjectSettings.globalize_path(script_path)
+    if not FileAccess.file_exists(absolute_path):
+        printerr("Script file does not exist: " + script_path)
+        quit(1)
+
+    var script := GDScript.new()
+    script.source_code = FileAccess.get_file_as_string(absolute_path)
+    var err := script.reload(true)  # keep_state = true
+
+    var result := {"script_path": script_path}
+    if err == OK:
+        result["valid"] = true
+        result["errors"] = []
+        print(JSON.stringify(result))
+    else:
+        result["valid"] = false
+        result["errors"] = ["Compilation error (code " + str(err) + ")"]
+        print(JSON.stringify(result))
 
 # ============================================================
 # Custom tile data

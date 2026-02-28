@@ -1740,4 +1740,164 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ["projectPath"],
     },
   },
+
+  // ── New interactive tools ───────────────────────────────────────────
+
+  {
+    name: "send_key_sequence",
+    category: "interactive",
+    readOnly: false,
+    description:
+      "Send a sequence of key presses to a running interactive Godot project, all processed server-side with minimal latency. Supports optional delays between keys. Much faster than calling send_key repeatedly. The project must be running via run_interactive.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        keys: {
+          type: "array",
+          description:
+            'Array of key names or delay objects. Strings are key names (e.g., "a", "enter", "space"). Objects with a "wait" property insert a delay in milliseconds (e.g., {"wait": 500}). Example: ["1", "a", "o", "s", {"wait": 2500}, "q", "d"]',
+          items: {},
+        },
+        delayMs: {
+          type: "number",
+          description:
+            "Default delay in milliseconds between each key press (default: 50). Individual waits in the keys array override this.",
+        },
+      },
+      required: ["keys"],
+    },
+  },
+
+  {
+    name: "pause_game",
+    category: "interactive",
+    readOnly: false,
+    description:
+      "Pause or unpause a running interactive Godot project. When paused, game time stops but the MCP receiver remains active for screenshots, state queries, and property changes. Useful for inspecting state without time pressure. The project must be running via run_interactive.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        paused: {
+          type: "boolean",
+          description:
+            "Whether to pause (true) or unpause (false) the game. Default: true.",
+        },
+      },
+      required: [],
+    },
+  },
+
+  {
+    name: "set_property",
+    category: "interactive",
+    readOnly: false,
+    description:
+      "Set a property on a live node in a running interactive Godot project. Resolves the node by path and sets the named property to the given value. Useful for testing edge cases (e.g., setting score, health, position). The project must be running via run_interactive.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        nodePath: {
+          type: "string",
+          description:
+            'Path to the target node relative to current scene root (e.g., "Player", "UI/HealthBar"). Also accepts absolute paths like "/root/GameManager".',
+        },
+        property: {
+          type: "string",
+          description:
+            'The property name to set (e.g., "score", "position", "health").',
+        },
+        value: {
+          description:
+            "The value to set. Supports numbers, strings, booleans, arrays (for Vector2/Vector3), and dictionaries.",
+        },
+      },
+      required: ["nodePath", "property", "value"],
+    },
+  },
+
+  {
+    name: "validate_script",
+    category: "script",
+    readOnly: true,
+    description:
+      "Validate a GDScript file for syntax errors without running the project. Checks the script using Godot's parser in headless mode and returns any errors found. Runs via headless Godot (no game needs to be running).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectPath: {
+          type: "string",
+          description: "Path to the Godot project directory.",
+        },
+        scriptPath: {
+          type: "string",
+          description:
+            'Path to the GDScript file to validate (relative to project, e.g., "scripts/player.gd").',
+        },
+      },
+      required: ["projectPath", "scriptPath"],
+    },
+  },
+
+  {
+    name: "execute_script",
+    category: "interactive",
+    readOnly: false,
+    description:
+      "Execute an arbitrary block of GDScript code at runtime in the context of the current scene. Unlike evaluate_expression (single expressions only), this supports multi-line scripts with variables, loops, and control flow. Returns the last expression value or explicit return. The project must be running via run_interactive.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        code: {
+          type: "string",
+          description:
+            'The GDScript code to execute. Runs as a function body in the context of the current scene. Use "return x" to return a value. Example: "var p = $Player\\nreturn p.position"',
+        },
+      },
+      required: ["code"],
+    },
+  },
+
+  {
+    name: "subscribe_signals",
+    category: "interactive",
+    readOnly: false,
+    description:
+      "Subscribe to signals on a node in the running game. Once subscribed, signal emissions are buffered and can be retrieved with get_signal_events. Useful for monitoring game events without polling. The project must be running via run_interactive.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        nodePath: {
+          type: "string",
+          description:
+            'Path to the node to subscribe to (e.g., "Player", "/root/EventBus").',
+        },
+        signals: {
+          type: "array",
+          description:
+            'Array of signal names to subscribe to (e.g., ["died", "health_changed"]).',
+          items: { type: "string" },
+        },
+      },
+      required: ["nodePath", "signals"],
+    },
+  },
+
+  {
+    name: "get_signal_events",
+    category: "interactive",
+    readOnly: true,
+    description:
+      "Retrieve buffered signal events captured since the last call to get_signal_events (or since subscribe_signals was called). Returns an array of events with signal name, arguments, and timestamp. Clears the buffer by default. The project must be running via run_interactive.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        clear: {
+          type: "boolean",
+          description:
+            "Whether to clear the event buffer after reading (default: true). Set to false to peek without consuming.",
+        },
+      },
+      required: [],
+    },
+  },
 ];

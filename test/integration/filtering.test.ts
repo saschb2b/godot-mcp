@@ -45,8 +45,8 @@ describe("Tool filtering", () => {
       }
     });
 
-    it("has 61 tools total", () => {
-      expect(TOOL_DEFINITIONS).toHaveLength(61);
+    it("has 68 tools total", () => {
+      expect(TOOL_DEFINITIONS).toHaveLength(68);
     });
 
     it("has 15 categories", () => {
@@ -59,7 +59,7 @@ describe("Tool filtering", () => {
     it("returns all tools when no filter is set", () => {
       const ctx = createCtx({});
       const tools = getActiveTools(ctx);
-      expect(tools).toHaveLength(61);
+      expect(tools).toHaveLength(68);
     });
 
     it("filters to a single category", () => {
@@ -91,7 +91,7 @@ describe("Tool filtering", () => {
       const ctx = createCtx({ excludeTools: ["export_project"] });
       const tools = getActiveTools(ctx);
       expect(tools.find((t) => t.name === "export_project")).toBeUndefined();
-      expect(tools.length).toBe(60);
+      expect(tools.length).toBe(67);
     });
 
     it("excludes multiple tools", () => {
@@ -99,7 +99,7 @@ describe("Tool filtering", () => {
         excludeTools: ["export_project", "manage_autoloads", "run_tests"],
       });
       const tools = getActiveTools(ctx);
-      expect(tools.length).toBe(58);
+      expect(tools.length).toBe(65);
       const names = tools.map((t) => t.name);
       expect(names).not.toContain("export_project");
       expect(names).not.toContain("manage_autoloads");
@@ -109,7 +109,7 @@ describe("Tool filtering", () => {
     it("ignores non-existent tool names in exclusion", () => {
       const ctx = createCtx({ excludeTools: ["nonexistent_tool"] });
       const tools = getActiveTools(ctx);
-      expect(tools).toHaveLength(61);
+      expect(tools).toHaveLength(68);
     });
   });
 

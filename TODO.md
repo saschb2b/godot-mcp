@@ -129,6 +129,22 @@ Inspired by [github/github-mcp-server](https://github.com/github/github-mcp-serv
 - [x] **Tool exclusion lists** — `MCP_EXCLUDE_TOOLS` env var to exclude specific tools by name (e.g., `"export_project,manage_autoloads"`).
 - [x] **Tool metadata** — Every tool now has `category` and `readOnly` fields for programmatic filtering.
 
+## Round 12 — Developer Experience
+
+Tools discovered during real game development (building a CSD-style task management game in Godot 4.6).
+
+### Interactive
+
+- [x] **`send_key_sequence`** — Send a batch of key presses with inter-key delays and explicit waits, all processed server-side. Much faster than calling `send_key` repeatedly.
+- [x] **`pause_game`** — Pause/unpause the game tree. MCP receiver stays active for state queries, screenshots, and property changes while paused.
+- [x] **`set_property`** — Set a property on a live node at runtime. Auto-converts JSON arrays to Vector2/Vector3/Color based on the existing property type.
+- [x] **`execute_script`** — Run multi-line GDScript code blocks at runtime (variables, loops, control flow). Unlike `evaluate_expression` which only handles single expressions. Autoload singletons are available as variables.
+- [x] **`subscribe_signals`** / **`get_signal_events`** — Subscribe to signals on any node and retrieve buffered emissions later. Useful for monitoring game events (score changes, deaths, level transitions) without polling.
+
+### Headless
+
+- [x] **`validate_script`** — Check a GDScript file for syntax errors without running the project. Uses Godot's parser in headless mode.
+
 ### Future Considerations
 
 - [ ] **Multi-instance support** — Run multiple Godot processes with IDs (e.g., "server", "client1", "client2") for multiplayer testing. (Upstream [PR #56](https://github.com/Coding-Solo/godot-mcp/pull/56))

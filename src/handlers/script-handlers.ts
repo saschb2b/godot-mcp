@@ -7,7 +7,7 @@ import {
 } from "../utils.js";
 import { executeOperation } from "../godot-executor.js";
 import { join, dirname } from "path";
-import { existsSync, writeFileSync, mkdirSync } from "fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 
 export async function handleReadScript(
   ctx: ServerContext,
@@ -121,6 +121,68 @@ export function handleWriteScript(ctx: ServerContext, args: any): ToolResponse {
     return createErrorResponse(
       `Failed to write script: ${error?.message ?? "Unknown error"}`,
       [],
+    );
+  }
+}
+
+export async function handleValidateScript(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  args = normalizeParameters(args);
+
+  if (!args.projectPath || !args.scriptPath) {
+    return createErrorResponse("Missing required parameters", [
+      "Provide projectPath and scriptPath",
+    ]);
+  }
+
+  if (!validatePath(args.projectPath) || !validatePath(args.scriptPath)) {
+    return createErrorResponse("Invalid path", [
+      'Provide valid paths without ".."',
+    ]);
+  }
+
+  try {
+    const projectFile = join(args.projectPath, "project.godot");
+    if (!existsSync(projectFile)) {
+      return createErrorResponse(
+        `Not a valid Godot project: ${args.projectPath}`,
+        ["Ensure the path contains a project.godot file"],
+      );
+    }
+
+    const scriptFile = join(args.projectPath, args.scriptPath);
+    if (!existsSync(scriptFile)) {
+      return createErrorResponse(
+        `Script file does not exist: ${args.scriptPath}`,
+        ["Ensure the script path is correct"],
+      );
+    }
+
+    const params = { scriptPath: args.scriptPath };
+    const { stdout, stderr } = await executeOperation(
+      ctx,
+      "validate_script",
+      params,
+      args.projectPath,
+    );
+
+    const output = stdout.trim();
+    const hasErrors = stderr.includes("SCRIPT_ERROR") || output.includes('"errors"');
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: output || (hasErrors ? stderr : "Script is valid: no errors found."),
+        },
+      ],
+    };
+  } catch (error: any) {
+    return createErrorResponse(
+      `Failed to validate script: ${error?.message ?? "Unknown error"}`,
+      ["Ensure Godot is installed correctly"],
     );
   }
 }

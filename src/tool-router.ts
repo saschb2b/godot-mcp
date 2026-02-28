@@ -74,6 +74,7 @@ const HANDLER_MAP: Record<string, HandlerFn> = {
   // Scripts
   read_script: scriptHandlers.handleReadScript,
   write_script: scriptHandlers.handleWriteScript,
+  validate_script: scriptHandlers.handleValidateScript,
 
   // Signals & groups
   connect_signal: signalGroupHandlers.handleConnectSignal,
@@ -106,6 +107,12 @@ const HANDLER_MAP: Record<string, HandlerFn> = {
   reset_scene: interactiveHandlers.handleResetScene,
   get_runtime_errors: interactiveHandlers.handleGetRuntimeErrors,
   game_screenshot: interactiveHandlers.handleGameScreenshot,
+  send_key_sequence: interactiveHandlers.handleSendKeySequence,
+  pause_game: interactiveHandlers.handlePauseGame,
+  set_property: interactiveHandlers.handleSetProperty,
+  execute_script: interactiveHandlers.handleExecuteScript,
+  subscribe_signals: interactiveHandlers.handleSubscribeSignals,
+  get_signal_events: interactiveHandlers.handleGetSignalEvents,
 
   // Screenshots
   capture_screenshot: screenshotHandlers.handleCaptureScreenshot,

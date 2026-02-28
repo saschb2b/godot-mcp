@@ -22,6 +22,12 @@ extends Node
 #   {"type": "get_performance_metrics"}
 #   {"type": "reset_scene"}
 #   {"type": "get_runtime_errors", "clear": true}
+#   {"type": "send_key_sequence", "keys": ["a", "b", {"wait": 500}, "c"], "delay_ms": 50}
+#   {"type": "pause_game", "paused": true}
+#   {"type": "set_property", "node_path": "Player", "property": "health", "value": 100}
+#   {"type": "execute_script", "code": "var p = $Player\nreturn p.position"}
+#   {"type": "subscribe_signals", "node_path": "/root/EventBus", "signals": ["score_changed"]}
+#   {"type": "get_signal_events", "clear": true}
 
 
 # Custom Logger that buffers runtime errors/warnings (Godot 4.5+)
@@ -101,6 +107,8 @@ var _server: TCPServer
 var _client: StreamPeerTCP
 var _buffer: String = ""
 var _logger: _McpLogger
+var _signal_events: Array[Dictionary] = []
+var _signal_subscriptions: Array[Dictionary] = []  # [{node, signal, callable}]
 
 func _ready() -> void:
 	_logger = _McpLogger.new()
@@ -191,6 +199,18 @@ func _dispatch(json_str: String) -> void:
 			_handle_reset_scene()
 		"get_runtime_errors":
 			_handle_get_runtime_errors(data)
+		"send_key_sequence":
+			_handle_send_key_sequence(data)
+		"pause_game":
+			_handle_pause_game(data)
+		"set_property":
+			_handle_set_property(data)
+		"execute_script":
+			_handle_execute_script(data)
+		"subscribe_signals":
+			_handle_subscribe_signals(data)
+		"get_signal_events":
+			_handle_get_signal_events(data)
 		_:
 			# Default: treat as input action
 			_handle_input(data)
@@ -583,6 +603,205 @@ func _handle_get_runtime_errors(data: Dictionary) -> void:
 	else:
 		entries = _logger.get_all()
 	_send_response({"ok": true, "type": "get_runtime_errors", "count": entries.size(), "errors": entries})
+
+
+func _handle_send_key_sequence(data: Dictionary) -> void:
+	var keys: Array = data.get("keys", [])
+	if keys.is_empty():
+		_send_response({"error": "Missing keys array"})
+		return
+
+	var default_delay_ms: int = data.get("delay_ms", 50)
+	var keys_sent: int = 0
+
+	for item in keys:
+		if item is Dictionary:
+			# Wait command: {"wait": 500}
+			var wait_ms: int = item.get("wait", 0)
+			if wait_ms > 0:
+				await get_tree().create_timer(wait_ms / 1000.0).timeout
+		elif item is String:
+			var key_str: String = item
+			var keycode := OS.find_keycode_from_string(key_str)
+			if keycode == KEY_NONE:
+				_send_response({"error": "Unknown key in sequence: " + key_str, "keys_sent": keys_sent})
+				return
+
+			# Press
+			var press := InputEventKey.new()
+			press.keycode = keycode
+			press.physical_keycode = keycode
+			press.pressed = true
+			Input.parse_input_event(press)
+			Input.flush_buffered_events()
+
+			# Wait a frame for the game to process the press
+			await get_tree().process_frame
+
+			# Release
+			var release := InputEventKey.new()
+			release.keycode = keycode
+			release.physical_keycode = keycode
+			release.pressed = false
+			Input.parse_input_event(release)
+			Input.flush_buffered_events()
+
+			keys_sent += 1
+
+			# Default inter-key delay
+			if default_delay_ms > 0:
+				await get_tree().create_timer(default_delay_ms / 1000.0).timeout
+
+	_send_response({"ok": true, "type": "send_key_sequence", "keys_sent": keys_sent})
+
+
+func _handle_pause_game(data: Dictionary) -> void:
+	var paused: bool = data.get("paused", true)
+	get_tree().paused = paused
+	_send_response({"ok": true, "type": "pause_game", "paused": paused})
+
+
+func _handle_set_property(data: Dictionary) -> void:
+	var node_path_str: String = data.get("node_path", "")
+	var property: String = data.get("property", "")
+	if node_path_str.is_empty() or property.is_empty():
+		_send_response({"error": "Missing node_path or property"})
+		return
+
+	var scene := get_tree().current_scene
+	if not scene:
+		_send_response({"error": "No current scene"})
+		return
+
+	var target: Node = scene.get_node_or_null(NodePath(node_path_str))
+	if not target:
+		target = get_node_or_null(NodePath(node_path_str))
+	if not target:
+		_send_response({"error": "Node not found: " + node_path_str})
+		return
+
+	var value = data.get("value")
+
+	# Convert array to Vector2/Vector3 if the existing property type expects it
+	if value is Array:
+		var current = target.get(property)
+		if current is Vector2 and value.size() == 2:
+			value = Vector2(value[0], value[1])
+		elif current is Vector3 and value.size() == 3:
+			value = Vector3(value[0], value[1], value[2])
+		elif current is Color and value.size() >= 3:
+			if value.size() == 4:
+				value = Color(value[0], value[1], value[2], value[3])
+			else:
+				value = Color(value[0], value[1], value[2])
+
+	target.set(property, value)
+	var new_value = target.get(property)
+	_send_response({"ok": true, "type": "set_property", "node": node_path_str, "property": property, "value": _serialize_value(new_value)})
+
+
+func _handle_execute_script(data: Dictionary) -> void:
+	var code: String = data.get("code", "")
+	if code.is_empty():
+		_send_response({"error": "Missing code"})
+		return
+
+	# Build a temporary GDScript with the code as a function body
+	var script_source := "extends RefCounted\n\n"
+
+	# Collect autoload references as variables
+	var autoload_lines := ""
+	for child in get_tree().root.get_children():
+		if child == get_tree().current_scene:
+			continue
+		if child.name.begins_with("_"):
+			continue
+		autoload_lines += "var " + child.name + ": Node\n"
+
+	if not autoload_lines.is_empty():
+		script_source += autoload_lines + "\n"
+
+	script_source += "var _scene: Node\n\n"
+	script_source += "func _execute():\n"
+
+	# Indent user code
+	for line in code.split("\n"):
+		script_source += "\t" + line + "\n"
+
+	var script := GDScript.new()
+	script.source_code = script_source
+	var err := script.reload()
+	if err != OK:
+		_send_response({"error": "Script compilation error: " + str(err)})
+		return
+
+	var instance = script.new()
+
+	# Set autoload references
+	for child in get_tree().root.get_children():
+		if child == get_tree().current_scene:
+			continue
+		if child.name.begins_with("_"):
+			continue
+		if child.name in instance:
+			instance.set(child.name, child)
+
+	instance._scene = get_tree().current_scene
+
+	var result = instance._execute()
+	_send_response({"ok": true, "type": "execute_script", "result": _serialize_value(result)})
+
+
+func _handle_subscribe_signals(data: Dictionary) -> void:
+	var node_path_str: String = data.get("node_path", "")
+	var signal_names: Array = data.get("signals", [])
+	if node_path_str.is_empty() or signal_names.is_empty():
+		_send_response({"error": "Missing node_path or signals"})
+		return
+
+	var scene := get_tree().current_scene
+	if not scene:
+		_send_response({"error": "No current scene"})
+		return
+
+	var target: Node = scene.get_node_or_null(NodePath(node_path_str))
+	if not target:
+		target = get_node_or_null(NodePath(node_path_str))
+	if not target:
+		_send_response({"error": "Node not found: " + node_path_str})
+		return
+
+	var subscribed: Array = []
+	for sig_name in signal_names:
+		if not target.has_signal(sig_name):
+			continue
+
+		# Create a callback that captures signal info
+		var cb := func(_a1 = null, _a2 = null, _a3 = null, _a4 = null, _a5 = null, _a6 = null):
+			var args_arr: Array = []
+			for a in [_a1, _a2, _a3, _a4, _a5, _a6]:
+				if a != null:
+					args_arr.append(_serialize_value(a))
+			_signal_events.append({
+				"signal": sig_name,
+				"node": node_path_str,
+				"args": args_arr,
+				"time": Time.get_ticks_msec(),
+			})
+
+		target.connect(sig_name, cb)
+		_signal_subscriptions.append({"node": target, "signal": sig_name, "callable": cb})
+		subscribed.append(sig_name)
+
+	_send_response({"ok": true, "type": "subscribe_signals", "node": node_path_str, "subscribed": subscribed})
+
+
+func _handle_get_signal_events(data: Dictionary) -> void:
+	var clear: bool = data.get("clear", true)
+	var events := _signal_events.duplicate()
+	if clear:
+		_signal_events.clear()
+	_send_response({"ok": true, "type": "get_signal_events", "count": events.size(), "events": events})
 
 
 func _serialize_value(value: Variant) -> Variant:

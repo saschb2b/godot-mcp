@@ -266,7 +266,7 @@ Ask Cline: _"Use the get_godot_version tool"_ -- if it returns a version, the fu
 
 This isn't just "launch editor and read logs". The MCP server can **build an entire game from scratch** -- create scenes, add and configure nodes, write GDScript files, wire up signals, set up tilemaps, then **run the game, play it via input commands, and observe the results through screenshots and state queries**.
 
-### 61 Tools Across 9 Categories
+### 68 Tools Across 9 Categories
 
 **Project & Editor**
 | Tool | Description |
@@ -302,6 +302,7 @@ This isn't just "launch editor and read logs". The MCP server can **build an ent
 |------|-------------|
 | `write_script` | Write or update a GDScript file (auto-creates directories) |
 | `read_script` | Read GDScript file contents |
+| `validate_script` | Check a GDScript file for syntax errors (headless, no runtime needed) |
 | `attach_script` | Attach a script to a node in a scene |
 
 **Assets & Resources**
@@ -348,6 +349,12 @@ This isn't just "launch editor and read logs". The MCP server can **build an ent
 | `get_performance_metrics` | Retrieve FPS, draw calls, memory, node count, physics stats |
 | `reset_scene` | Reload the current scene (handy for test loops) |
 | `get_runtime_errors` | Retrieve runtime errors/warnings with backtraces (Godot 4.5+ Logger API) |
+| `send_key_sequence` | Send a batch of key presses with timing/delays (faster than repeated `send_key`) |
+| `pause_game` | Pause/unpause game time (MCP receiver stays active for queries) |
+| `set_property` | Set a property on a live node (auto-converts arrays to Vector2/Vector3/Color) |
+| `execute_script` | Run multi-line GDScript code blocks at runtime with autoload access |
+| `subscribe_signals` | Subscribe to node signals for async event monitoring |
+| `get_signal_events` | Retrieve buffered signal events captured since last read |
 | `game_screenshot` | Capture the live game viewport as PNG |
 | `run_and_capture` | Run game for N seconds, capture screenshot, stop |
 | `capture_screenshot` | Render a scene to PNG (static, no runtime) |
@@ -368,14 +375,19 @@ This isn't just "launch editor and read logs". The MCP server can **build an ent
 The standout feature. `run_interactive` injects a TCP server into the running game as a temporary autoload. The AI can then:
 
 1. **Send inputs** -- `send_input(action: "move_right")` for named actions, `send_key(key: "space")` for keyboard, `send_mouse_click(x: 100, y: 200)` for mouse
-2. **Query state** -- `game_state()` returns health, score, turn, level, player position, game over status
-3. **Call methods** -- `call_method(nodePath: "Player", method: "take_damage", args: [10])` invokes any method on a live node
-4. **Find nodes** -- `find_nodes(pattern: "Enemy*", typeFilter: "CharacterBody2D")` searches the runtime scene tree
-5. **Evaluate expressions** -- `evaluate_expression(expression: "get_tree().current_scene.name")` runs arbitrary GDScript at runtime
-6. **Wait for events** -- `wait_for_signal(nodePath: "Player", signal: "died")` or `wait_for_node(nodePath: "Player/Sword")` for sequencing
-7. **Monitor performance** -- `get_performance_metrics()` returns FPS, draw calls, memory, node count, physics stats
-8. **Take screenshots** -- `game_screenshot()` captures the live viewport with all runtime rendering
-9. **Reset and replay** -- `reset_scene()` reloads the current scene, chain with inputs to test game loops
+2. **Batch key sequences** -- `send_key_sequence(keys: ["1", "a", "o", {"wait": 2000}, "s"])` sends multiple keys with timing, all server-side
+3. **Query state** -- `game_state()` returns health, score, turn, level, player position, game over status
+4. **Set properties** -- `set_property(nodePath: "/root/GameManager", property: "score", value: 9999)` modifies live node properties
+5. **Call methods** -- `call_method(nodePath: "Player", method: "take_damage", args: [10])` invokes any method on a live node
+6. **Find nodes** -- `find_nodes(pattern: "Enemy*", typeFilter: "CharacterBody2D")` searches the runtime scene tree
+7. **Evaluate expressions** -- `evaluate_expression(expression: "get_tree().current_scene.name")` runs arbitrary GDScript at runtime
+8. **Execute scripts** -- `execute_script(code: "var p = $Player\nreturn p.position")` runs multi-line GDScript blocks with autoload access
+9. **Wait for events** -- `wait_for_signal(nodePath: "Player", signal: "died")` or `wait_for_node(nodePath: "Player/Sword")` for sequencing
+10. **Monitor signals** -- `subscribe_signals(nodePath: "/root/EventBus", signals: ["score_changed"])` then `get_signal_events()` to read buffered emissions
+11. **Monitor performance** -- `get_performance_metrics()` returns FPS, draw calls, memory, node count, physics stats
+12. **Pause/unpause** -- `pause_game(paused: true)` freezes game time while keeping MCP receiver active for inspection
+13. **Take screenshots** -- `game_screenshot()` captures the live viewport with all runtime rendering
+14. **Reset and replay** -- `reset_scene()` reloads the current scene, chain with inputs to test game loops
 
 The TCP connection is persistent (single socket reused across commands). Everything is cleaned up automatically when the game stops -- the injected autoload is removed and `project.godot` is restored.
 
