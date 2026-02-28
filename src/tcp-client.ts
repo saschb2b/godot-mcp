@@ -95,6 +95,10 @@ export async function sendTcpCommand(
       if (ctx.tcp.pendingReject) {
         ctx.tcp.pendingResolve = null;
         ctx.tcp.pendingReject = null;
+        // Drain any stale data in the buffer to prevent desync with
+        // the next command's response. This can happen when a scene
+        // change delays the Godot response past the timeout window.
+        ctx.tcp.buffer = "";
         reject(new Error("TCP command timed out"));
       }
     }, timeoutMs);

@@ -228,14 +228,14 @@ func _handle_input(data: Dictionary) -> void:
 	event.action = action
 	event.pressed = pressed
 
+	# Send response before flushing — flush can trigger scene changes
+	_send_response({"ok": true, "action": action, "pressed": pressed})
 	Input.parse_input_event(event)
 	if pressed:
 		Input.action_press(action, data.get("strength", 1.0))
 	else:
 		Input.action_release(action)
 	Input.flush_buffered_events()
-
-	_send_response({"ok": true, "action": action, "pressed": pressed})
 
 
 func _handle_screenshot(data: Dictionary) -> void:
@@ -370,9 +370,10 @@ func _handle_send_key(data: Dictionary) -> void:
 	event.alt_pressed = data.get("alt", false)
 	event.meta_pressed = data.get("meta", false)
 
+	# Send response before flushing — flush can trigger scene changes
+	_send_response({"ok": true, "type": "send_key", "key": key_str, "pressed": pressed})
 	Input.parse_input_event(event)
 	Input.flush_buffered_events()
-	_send_response({"ok": true, "type": "send_key", "key": key_str, "pressed": pressed})
 
 
 func _handle_send_mouse_click(data: Dictionary) -> void:
@@ -395,6 +396,11 @@ func _handle_send_mouse_click(data: Dictionary) -> void:
 
 	var pos := Vector2(x, y)
 
+	# Send response BEFORE flushing events, because flush_buffered_events()
+	# can trigger handlers that call change_scene_to_file(), which may delay
+	# or prevent the TCP response from being sent in time.
+	_send_response({"ok": true, "type": "send_mouse_click", "x": x, "y": y, "button": button_str})
+
 	# Press
 	var press := InputEventMouseButton.new()
 	press.position = pos
@@ -413,7 +419,6 @@ func _handle_send_mouse_click(data: Dictionary) -> void:
 	Input.parse_input_event(release)
 
 	Input.flush_buffered_events()
-	_send_response({"ok": true, "type": "send_mouse_click", "x": x, "y": y, "button": button_str})
 
 
 func _handle_send_mouse_drag(data: Dictionary) -> void:
@@ -466,8 +471,9 @@ func _handle_send_mouse_drag(data: Dictionary) -> void:
 	release.pressed = false
 	Input.parse_input_event(release)
 
-	Input.flush_buffered_events()
+	# Send response before flushing — flush can trigger scene changes
 	_send_response({"ok": true, "type": "send_mouse_drag", "from": str(from), "to": str(to), "steps": steps})
+	Input.flush_buffered_events()
 
 
 func _handle_wait_for_signal(data: Dictionary) -> void:
