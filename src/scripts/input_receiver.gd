@@ -2,7 +2,7 @@ extends Node
 
 # MCP Input Receiver — TCP server autoload that receives input commands
 # from the MCP server and injects them into the running game via
-# Input.parse_input_event(). Temporarily injected by the MCP server.
+# get_viewport().push_input(). Temporarily injected by the MCP server.
 #
 # Protocol: newline-delimited JSON over TCP on port 9876
 # Commands:
@@ -230,7 +230,7 @@ func _handle_input(data: Dictionary) -> void:
 
 	# Send response before flushing — flush can trigger scene changes
 	_send_response({"ok": true, "action": action, "pressed": pressed})
-	Input.parse_input_event(event)
+	get_viewport().push_input(event)
 	if pressed:
 		Input.action_press(action, data.get("strength", 1.0))
 	else:
@@ -372,7 +372,7 @@ func _handle_send_key(data: Dictionary) -> void:
 
 	# Send response before flushing — flush can trigger scene changes
 	_send_response({"ok": true, "type": "send_key", "key": key_str, "pressed": pressed})
-	Input.parse_input_event(event)
+	get_viewport().push_input(event)
 	Input.flush_buffered_events()
 
 
@@ -408,7 +408,7 @@ func _handle_send_mouse_click(data: Dictionary) -> void:
 	press.button_index = button_index
 	press.pressed = true
 	press.double_click = double_click
-	Input.parse_input_event(press)
+	get_viewport().push_input(press)
 
 	# Release
 	var release := InputEventMouseButton.new()
@@ -416,7 +416,7 @@ func _handle_send_mouse_click(data: Dictionary) -> void:
 	release.global_position = pos
 	release.button_index = button_index
 	release.pressed = false
-	Input.parse_input_event(release)
+	get_viewport().push_input(release)
 
 	Input.flush_buffered_events()
 
@@ -450,7 +450,7 @@ func _handle_send_mouse_drag(data: Dictionary) -> void:
 	press.global_position = from
 	press.button_index = button_index
 	press.pressed = true
-	Input.parse_input_event(press)
+	get_viewport().push_input(press)
 
 	# Motion events
 	steps = max(steps, 1)
@@ -461,7 +461,7 @@ func _handle_send_mouse_drag(data: Dictionary) -> void:
 		motion.position = pos
 		motion.global_position = pos
 		motion.button_mask = MOUSE_BUTTON_MASK_LEFT if button_str == "left" else (MOUSE_BUTTON_MASK_RIGHT if button_str == "right" else MOUSE_BUTTON_MASK_MIDDLE)
-		Input.parse_input_event(motion)
+		get_viewport().push_input(motion)
 
 	# Release at end
 	var release := InputEventMouseButton.new()
@@ -469,7 +469,7 @@ func _handle_send_mouse_drag(data: Dictionary) -> void:
 	release.global_position = to
 	release.button_index = button_index
 	release.pressed = false
-	Input.parse_input_event(release)
+	get_viewport().push_input(release)
 
 	# Send response before flushing — flush can trigger scene changes
 	_send_response({"ok": true, "type": "send_mouse_drag", "from": str(from), "to": str(to), "steps": steps})
@@ -638,7 +638,7 @@ func _handle_send_key_sequence(data: Dictionary) -> void:
 			press.keycode = keycode
 			press.physical_keycode = keycode
 			press.pressed = true
-			Input.parse_input_event(press)
+			get_viewport().push_input(press)
 			Input.flush_buffered_events()
 
 			# Wait a frame for the game to process the press
@@ -649,7 +649,7 @@ func _handle_send_key_sequence(data: Dictionary) -> void:
 			release.keycode = keycode
 			release.physical_keycode = keycode
 			release.pressed = false
-			Input.parse_input_event(release)
+			get_viewport().push_input(release)
 			Input.flush_buffered_events()
 
 			keys_sent += 1
