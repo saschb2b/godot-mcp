@@ -11,7 +11,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     name: "launch_editor",
     category: "process",
     readOnly: false,
-    description: "Launch Godot editor for a specific project",
+    description:
+      "Launch the Godot editor GUI for a specific project. Use this when the user wants to open the editor itself, not run the game. To run the game for testing, use run_project (non-interactive) or run_interactive (with input/screenshot/state support) instead.",
     inputSchema: {
       type: "object",
       properties: {
@@ -27,7 +28,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     name: "run_project",
     category: "process",
     readOnly: false,
-    description: "Run the Godot project and capture output",
+    description:
+      "Run the Godot project non-interactively and capture console output. You cannot send input, take screenshots, or query state with this mode. Use for simple smoke tests or checking startup logs. For interactive testing (sending keys, clicking, capturing screenshots, querying game state), use run_interactive instead.",
     inputSchema: {
       type: "object",
       properties: {
@@ -48,7 +50,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "process",
     readOnly: true,
     description:
-      "Get the current debug output and errors. Supports filtering by errors_only and tail to reduce output size.",
+      "Get console output (stdout/stderr) from a Godot project started via run_project or run_interactive. Supports filtering by errors_only and tail to reduce output size. For structured runtime errors with stack traces (Godot 4.5+), use get_runtime_errors instead (requires run_interactive).",
     inputSchema: {
       type: "object",
       properties: {
@@ -70,7 +72,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     name: "stop_project",
     category: "process",
     readOnly: false,
-    description: "Stop the currently running Godot project",
+    description:
+      "Stop the currently running Godot project (whether started via run_project or run_interactive). Does not affect the Godot editor if launched separately via launch_editor.",
     inputSchema: {
       type: "object",
       properties: {},
@@ -128,7 +131,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     name: "create_scene",
     category: "scene",
     readOnly: false,
-    description: "Create a new Godot scene file",
+    description:
+      "Create a new Godot scene (.tscn) file with a root node. Specify rootNodeType (e.g., 'Node2D', 'Node3D', 'Control'; defaults to 'Node2D'). After creation, use add_node to add child nodes, set_node_properties to configure them, and attach_script to add behavior.",
     inputSchema: {
       type: "object",
       properties: {
@@ -153,7 +157,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     name: "add_node",
     category: "node",
     readOnly: false,
-    description: "Add a node to an existing scene",
+    description:
+      "Add a child node to an existing scene file on disk. If parentNodePath is omitted, the node is added under the root node. To add a sub-scene instance instead, use instantiate_scene.",
     inputSchema: {
       type: "object",
       properties: {
@@ -249,7 +254,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     name: "save_scene",
     category: "scene",
     readOnly: false,
-    description: "Save changes to a scene file",
+    description:
+      "Save a scene file, optionally to a new path (creating a variant/copy). Most scene-editing tools (add_node, set_node_properties, remove_node, etc.) save automatically. Use save_scene primarily to save a copy to a different path via the newPath parameter.",
     inputSchema: {
       type: "object",
       properties: {
@@ -315,7 +321,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "scene",
     readOnly: true,
     description:
-      "Read a scene's node tree, returning node names, types, properties, and hierarchy as JSON",
+      "Read a scene's node tree from a .tscn file on disk, returning node names, types, properties, and hierarchy as JSON. Does not require a running game. For a higher-level architectural summary (type distribution, signal connections, group memberships), use get_scene_insights. To search nodes in a running game (including dynamically spawned nodes), use find_nodes instead.",
     inputSchema: {
       type: "object",
       properties: {
@@ -335,7 +341,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     name: "set_node_properties",
     category: "node",
     readOnly: false,
-    description: "Set properties on an existing node in a scene",
+    description:
+      "Set properties on a node in a saved scene file (.tscn) on disk. This modifies the scene definition permanently. To change properties on a live node at runtime instead, use set_property (requires run_interactive).",
     inputSchema: {
       type: "object",
       properties: {
@@ -430,7 +437,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "settings",
     readOnly: false,
     description:
-      "Modify project.godot settings (autoloads, input actions, display settings, etc.)",
+      "Modify project.godot settings (input actions, display settings, rendering, physics, etc.). For managing autoload singletons specifically, prefer manage_autoloads — it handles the autoload format correctly.",
     inputSchema: {
       type: "object",
       properties: {
@@ -504,7 +511,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "signal_group",
     readOnly: false,
     description:
-      "Connect a signal from one node to a method on another node in a scene",
+      "Connect a signal from one node to a method on another node in a saved scene file (.tscn) on disk. This is a permanent scene-level connection. For runtime signal monitoring, use subscribe_signals/get_signal_events or send_key_sequence with collectSignals instead.",
     inputSchema: {
       type: "object",
       properties: {
@@ -835,7 +842,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "animation",
     readOnly: false,
     description:
-      "Add an animation to an existing AnimationPlayer node with tracks and keyframes",
+      "Add an animation to an existing AnimationPlayer node with tracks and keyframes. The AnimationPlayer must already exist in the scene — to create one, use create_animation_player first.",
     inputSchema: {
       type: "object",
       properties: {
@@ -902,7 +909,8 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     name: "read_script",
     category: "script",
     readOnly: true,
-    description: "Read the contents of a GDScript file from a Godot project",
+    description:
+      "Read the contents of a GDScript file from a Godot project. Returns the full source code as text. To modify the script, use write_script. To check for syntax errors, use validate_script.",
     inputSchema: {
       type: "object",
       properties: {
@@ -923,7 +931,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "script",
     readOnly: false,
     description:
-      "Write or update a GDScript file in a Godot project. Creates parent directories if needed.",
+      "Write or update a GDScript file in a Godot project. Overwrites the entire file with the provided content. Creates parent directories if needed. After writing, use validate_script to check for syntax errors. To read the current contents first, use read_script.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1054,7 +1062,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "node",
     readOnly: true,
     description:
-      "Read properties from a node in a scene. Returns all non-default properties, or specific ones if listed.",
+      "Read properties from a node in a saved scene file (.tscn) on disk. Returns all non-default properties, or specific ones if listed. This reads the scene definition, not a running game. To read properties at runtime, use evaluate_expression (e.g., '$Player.health') or call_method (requires run_interactive).",
     inputSchema: {
       type: "object",
       properties: {
@@ -1082,7 +1090,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "animation",
     readOnly: false,
     description:
-      "Create an AnimationPlayer node with optional pre-configured animations",
+      "Create an AnimationPlayer node in a scene with optional pre-configured animations. Use this when no AnimationPlayer exists yet. To add more animations to an existing AnimationPlayer later, use add_animation.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1207,7 +1215,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "screenshot",
     readOnly: true,
     description:
-      "Capture a screenshot of a Godot scene by rendering it and saving the viewport as a PNG image. Requires a display server (will not work in headless/CI environments). Returns the file path to the saved screenshot, which can be viewed with the Read tool.",
+      "Render a scene file statically and save the viewport as a PNG screenshot. No game needs to be running — this opens the scene in Godot, waits a few frames, and captures. Use for previewing scene layout, UI design, or static content. For capturing a live running game, use game_screenshot (requires run_interactive) or run_and_capture (standalone run+capture without interactive session). Requires a display server. Returns the file path, viewable with the Read tool.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1249,7 +1257,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "screenshot",
     readOnly: true,
     description:
-      "Run the Godot project for a specified duration, capture a screenshot, then stop. Useful for automated testing of runtime behavior and procedural content. Requires a display server.",
+      "Run the Godot project for a specified duration, capture a screenshot, then stop automatically. Combines run + wait + screenshot + stop in one call. Unlike capture_screenshot (static scene render, no game running), this runs the full game so procedural content, physics, and animations are active. Unlike game_screenshot (requires run_interactive), this is standalone — no interactive session needed. Best for quick visual verification of runtime behavior. Requires a display server.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1280,7 +1288,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "interactive",
     readOnly: false,
     description:
-      "Send an input action to a running Godot project via TCP. The project must be running with the MCP input receiver (use run_interactive to start with input support). Supports game actions like move_up, move_down, move_left, move_right, or any custom input action defined in the project.",
+      "Send a Godot InputMap action (e.g., 'move_up', 'jump', 'select_task_1') to a running interactive project. These are the named actions defined in Project Settings > Input Map, NOT raw key presses. Use list_input_actions to discover available actions. For raw keyboard keys (e.g., 'a', 'space', 'enter'), use send_key or send_key_sequence instead. The project must be running via run_interactive.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1303,7 +1311,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "settings",
     readOnly: true,
     description:
-      "List all input actions defined in a Godot project's project.godot file. Useful for discovering available actions before using send_input.",
+      "List all input actions defined in a Godot project's project.godot file (the InputMap). Useful for discovering available actions before using send_input. Does not require a running game. Note: these are named actions (e.g., 'move_left'), not raw keys — for raw keyboard input, use send_key or send_key_sequence.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1382,7 +1390,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "interactive",
     readOnly: true,
     description:
-      "Search the live runtime scene tree by name pattern and/or type. Returns matching nodes with their path, type, position, and groups. The project must be running via run_interactive.",
+      "Search the live runtime scene tree by name pattern and/or type. Queries a running game so dynamically spawned nodes are included. Returns matching nodes with their path, type, position, and groups. For reading the static scene tree from a .tscn file on disk (without running the game), use get_scene_tree instead. The project must be running via run_interactive.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1480,7 +1488,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "interactive",
     readOnly: false,
     description:
-      "Send a mouse click at specific coordinates to a running interactive Godot project via TCP. Simulates a full press+release cycle. The project must be running via run_interactive.",
+      "Send a mouse click at specific coordinates to a running interactive Godot project. Simulates a full press+release cycle. For just moving the cursor without clicking, use send_mouse_motion. For click-and-drag, use send_mouse_drag. The project must be running via run_interactive.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1531,7 +1539,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "interactive",
     readOnly: false,
     description:
-      "Send a mouse drag operation from one position to another in a running interactive Godot project via TCP. Simulates press, intermediate motion events, and release. The project must be running via run_interactive.",
+      "Send a mouse drag operation from one position to another in a running interactive Godot project. Simulates press at start, intermediate motion events, and release at end. For just moving the cursor without a button press, use send_mouse_motion. For a simple click, use send_mouse_click. The project must be running via run_interactive.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1692,7 +1700,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "analysis",
     readOnly: true,
     description:
-      "Analyze a GDScript file: method classification (lifecycle, signal handlers, public, private), signal definitions and emissions, dependencies (preload/load), and exported variables. Gives behavioral understanding of a script. Runs via headless Godot (no game needs to be running).",
+      "Analyze a GDScript file (not a node — this takes a scriptPath, not a nodePath). Classifies methods (lifecycle, signal handlers, public, private), identifies signal definitions and emissions, maps dependencies (preload/load), and lists exported variables. For reading raw script source, use read_script. For analyzing a scene's node structure, use get_scene_insights or get_scene_tree. Runs via headless Godot (no game needs to be running).",
     inputSchema: {
       type: "object",
       properties: {
@@ -1893,7 +1901,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "interactive",
     readOnly: false,
     description:
-      "Set a property on a live node in a running interactive Godot project. Resolves the node by path and sets the named property to the given value. Useful for testing edge cases (e.g., setting score, health, position). The project must be running via run_interactive.",
+      "Set a property on a live node in a running interactive Godot project at runtime. Changes take effect immediately but are NOT saved to the scene file. To permanently modify a scene file on disk, use set_node_properties instead. Useful for testing edge cases (e.g., setting score, health, position). The project must be running via run_interactive.",
     inputSchema: {
       type: "object",
       properties: {
