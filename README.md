@@ -349,7 +349,9 @@ This isn't just "launch editor and read logs". The MCP server can **build an ent
 | `get_performance_metrics` | Retrieve FPS, draw calls, memory, node count, physics stats |
 | `reset_scene` | Reload the current scene (handy for test loops) |
 | `get_runtime_errors` | Retrieve runtime errors/warnings with backtraces (Godot 4.5+ Logger API) |
-| `send_key_sequence` | Send a batch of key presses with timing/delays (faster than repeated `send_key`) |
+| `send_key_sequence` | Send key presses with inline screenshots, state snapshots, and signal event collection |
+| `send_joypad_button` | Send gamepad button events (A, B, X, Y, shoulders, dpad, start, etc.) |
+| `send_joypad_motion` | Send gamepad analog stick/trigger axis events with float precision |
 | `pause_game` | Pause/unpause game time (MCP receiver stays active for queries) |
 | `set_property` | Set a property on a live node (auto-converts arrays to Vector2/Vector3/Color) |
 | `execute_script` | Run multi-line GDScript code blocks at runtime with autoload access |
@@ -374,8 +376,8 @@ This isn't just "launch editor and read logs". The MCP server can **build an ent
 
 The standout feature. `run_interactive` injects a TCP server into the running game as a temporary autoload. The AI can then:
 
-1. **Send inputs** -- `send_input(action: "move_right")` for named actions, `send_key(key: "space")` for keyboard, `send_mouse_click(x: 100, y: 200)` for mouse
-2. **Batch key sequences** -- `send_key_sequence(keys: ["1", "a", "o", {"wait": 2000}, "s"])` sends multiple keys with timing, all server-side
+1. **Send inputs** -- `send_input(action: "move_right")` for named actions, `send_key(key: "space")` for keyboard, `send_mouse_click(x: 100, y: 200)` for mouse, `send_joypad_button(button: "a")` and `send_joypad_motion(axis: "left_x", value: 0.75)` for gamepad
+2. **Batch key sequences** -- `send_key_sequence(keys: ["1", "a", {"state": true}, "o", {"wait": 2000}, {"screenshot": "mid.png"}, "s"], collectSignals: [{nodePath: "/root/EventBus", signals: ["task_completed"]}])` sends keys with inline checkpoints — screenshots, state snapshots, and signal collection all in one round-trip
 3. **Query state** -- `game_state()` returns health, score, turn, level, player position, game over status
 4. **Set properties** -- `set_property(nodePath: "/root/GameManager", property: "score", value: 9999)` modifies live node properties
 5. **Call methods** -- `call_method(nodePath: "Player", method: "take_damage", args: [10])` invokes any method on a live node
@@ -390,6 +392,39 @@ The standout feature. `run_interactive` injects a TCP server into the running ga
 14. **Reset and replay** -- `reset_scene()` reloads the current scene, chain with inputs to test game loops
 
 The TCP connection is persistent (single socket reused across commands). Everything is cleaned up automatically when the game stops -- the injected autoload is removed and `project.godot` is restored.
+
+### Efficient Testing Patterns
+
+`send_key_sequence` is the primary tool for gameplay testing. It bundles keys, state snapshots, screenshots, and signal collection into a single round-trip — much faster than calling individual tools in a loop.
+
+**Fast gameplay test (1 round-trip):**
+```
+send_key_sequence({
+  keys: ["1", "a", {"state": true}, "o", {"wait": 2000}, {"screenshot": "mid.png"}, "s"],
+  collectSignals: [{nodePath: "/root/EventBus", signals: ["task_completed", "score_changed"]}]
+})
+// Response includes:
+//   keys_sent: 4
+//   states: [{state: {scene: "Desktop", score: 100}, index: 2}]
+//   screenshots: [{path: "mid.png", size: "1024x768", index: 3}]
+//   events: [{signal: "score_changed", node: "/root/EventBus", args: [200]}]
+```
+
+**Avoid these slower patterns:**
+```
+// BAD: 3 round-trips for the same result
+subscribe_signals({nodePath: "/root/EventBus", signals: ["task_completed"]})
+send_key_sequence({keys: ["1", "a", "o", "s"]})
+get_signal_events()
+
+// BAD: N round-trips instead of 1
+send_key({key: "a"})
+game_state()
+send_key({key: "b"})
+game_screenshot()
+```
+
+**When to use `subscribe_signals` instead:** Only when you need to monitor signals across multiple separate commands (e.g., subscribe once, then issue several unrelated tool calls and check accumulated events later).
 
 ## Environment Variables
 

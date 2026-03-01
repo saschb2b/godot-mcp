@@ -1341,7 +1341,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "interactive",
     readOnly: true,
     description:
-      "Get the current game state from a running interactive Godot project. Returns health, score, turn, level, player position, and other state from autoloads. The project must be running via run_interactive.",
+      'Get the current game state from a running interactive Godot project. Returns health, score, turn, level, player position, and other state from autoloads. For capturing state at specific points during input, use send_key_sequence with {"state": true} entries instead — it avoids extra round-trips. The project must be running via run_interactive.',
     inputSchema: {
       type: "object",
       properties: {},
@@ -1423,7 +1423,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "interactive",
     readOnly: true,
     description:
-      "Capture a screenshot from a running interactive Godot project. Unlike capture_screenshot, this captures the actual live game with all runtime state (procedural content, animations, etc). The project must be running via run_interactive.",
+      'Capture a screenshot from a running interactive Godot project. Unlike capture_screenshot, this captures the actual live game with all runtime state (procedural content, animations, etc). For capturing screenshots at specific points during input, use send_key_sequence with {"screenshot": "path"} entries instead — it avoids extra round-trips. The project must be running via run_interactive.',
     inputSchema: {
       type: "object",
       properties: {
@@ -1441,7 +1441,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "interactive",
     readOnly: false,
     description:
-      'Send a keyboard key event to a running interactive Godot project via TCP. Supports any key name recognized by Godot (e.g., "space", "a", "escape", "f1") and modifier keys. The project must be running via run_interactive.',
+      'Send a single keyboard key event to a running interactive Godot project. Supports any key name recognized by Godot (e.g., "space", "a", "escape", "f1") and modifier keys. For sending multiple keys, prefer send_key_sequence — it processes all keys server-side in one round-trip with optional state/screenshot checkpoints. The project must be running via run_interactive.',
     inputSchema: {
       type: "object",
       properties: {
@@ -1748,14 +1748,14 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "interactive",
     readOnly: false,
     description:
-      "Send a sequence of key presses to a running interactive Godot project, all processed server-side with minimal latency. Supports optional delays between keys. Much faster than calling send_key repeatedly. The project must be running via run_interactive.",
+      'The primary tool for gameplay testing. Sends multiple key presses in a single round-trip with inline checkpoints. Use collectSignals to capture signal events during input (more efficient than subscribe_signals + get_signal_events), {"state": true} entries to snapshot game state at any point, and {"screenshot": "path"} entries to capture the viewport mid-sequence. All collected data is returned in one response — much faster than calling send_key, game_state, or game_screenshot separately. The project must be running via run_interactive.',
     inputSchema: {
       type: "object",
       properties: {
         keys: {
           type: "array",
           description:
-            'Array of key names or delay objects. Strings are key names (e.g., "a", "enter", "space"). Objects with a "wait" property insert a delay in milliseconds (e.g., {"wait": 500}). Example: ["1", "a", "o", "s", {"wait": 2500}, "q", "d"]',
+            'Array of key names or control objects. Strings are key names (e.g., "a", "enter", "space"). Objects: {"wait": 500} inserts a delay in ms, {"screenshot": "/path/to/file.png"} captures a screenshot at that point, {"state": true} captures a game state snapshot. Example: ["1", "a", {"state": true}, "o", {"wait": 2000}, {"screenshot": "/tmp/mid.png"}, "s"]',
           items: {},
         },
         delayMs: {
@@ -1763,8 +1763,88 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
           description:
             "Default delay in milliseconds between each key press (default: 50). Individual waits in the keys array override this.",
         },
+        collectSignals: {
+          type: "array",
+          description:
+            "Subscribe to signals during the sequence and return captured events in the response. Each entry specifies a node and its signals to monitor.",
+          items: {
+            type: "object",
+            properties: {
+              nodePath: {
+                type: "string",
+                description:
+                  'Path to the node emitting signals (e.g., "/root/EventBus", "Player").',
+              },
+              signals: {
+                type: "array",
+                description:
+                  'Signal names to subscribe to (e.g., ["task_completed", "died"]).',
+                items: { type: "string" },
+              },
+            },
+            required: ["nodePath", "signals"],
+          },
+        },
       },
       required: ["keys"],
+    },
+  },
+
+  {
+    name: "send_joypad_button",
+    category: "interactive",
+    readOnly: false,
+    description:
+      'Send a gamepad/controller button event to a running interactive Godot project. Supports standard gamepad buttons (A, B, X, Y, shoulders, dpad, start, back, sticks, paddles, touchpad). For games using Godot input actions, prefer send_input instead. The project must be running via run_interactive.',
+    inputSchema: {
+      type: "object",
+      properties: {
+        button: {
+          type: "string",
+          description:
+            'The gamepad button name. Standard buttons: "a", "b", "x", "y", "lb"/"left_shoulder", "rb"/"right_shoulder", "lt"/"left_stick", "rt"/"right_stick", "dpad_up", "dpad_down", "dpad_left", "dpad_right", "start", "back"/"select", "guide". Additional: "misc1", "paddle1"-"paddle4", "touchpad".',
+        },
+        pressed: {
+          type: "boolean",
+          description:
+            "Whether the button is pressed (true) or released (false). Default: true.",
+        },
+        device: {
+          type: "integer",
+          description:
+            "Controller device index (default: 0). Use for multi-controller testing.",
+        },
+      },
+      required: ["button"],
+    },
+  },
+
+  {
+    name: "send_joypad_motion",
+    category: "interactive",
+    readOnly: false,
+    description:
+      'Send a gamepad analog stick or trigger axis event to a running interactive Godot project. Simulates analog input with float precision. For games using Godot input actions, prefer send_input with a strength parameter instead. The project must be running via run_interactive.',
+    inputSchema: {
+      type: "object",
+      properties: {
+        axis: {
+          type: "string",
+          description:
+            'The axis name: "left_x", "left_y" (left stick), "right_x", "right_y" (right stick), "trigger_left", "trigger_right" (analog triggers).',
+        },
+        value: {
+          type: "number",
+          description:
+            "Axis value. Sticks: -1.0 to 1.0 (left/up = negative, right/down = positive). Triggers: 0.0 to 1.0.",
+        },
+        device: {
+          type: "integer",
+          description:
+            "Controller device index (default: 0). Use for multi-controller testing.",
+        },
+      },
+      required: ["axis", "value"],
     },
   },
 
@@ -1862,7 +1942,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "interactive",
     readOnly: false,
     description:
-      "Subscribe to signals on a node in the running game. Once subscribed, signal emissions are buffered and can be retrieved with get_signal_events. Useful for monitoring game events without polling. The project must be running via run_interactive.",
+      "Subscribe to signals on a node for persistent monitoring across multiple tool calls. Emissions are buffered and retrieved with get_signal_events. For monitoring signals during a single key sequence, prefer send_key_sequence with collectSignals instead — it's more efficient (one round-trip vs three). Use subscribe_signals only when you need to track events across multiple separate commands. The project must be running via run_interactive.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1887,7 +1967,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "interactive",
     readOnly: true,
     description:
-      "Retrieve buffered signal events captured since the last call to get_signal_events (or since subscribe_signals was called). Returns an array of events with signal name, arguments, and timestamp. Clears the buffer by default. The project must be running via run_interactive.",
+      "Retrieve buffered signal events accumulated since subscribe_signals was called (or since the last get_signal_events with clear: true). Returns events with signal name, arguments, and timestamp; clears the buffer by default. Note: for signal monitoring during a key sequence, prefer send_key_sequence with collectSignals — it captures events inline without needing subscribe + poll. The project must be running via run_interactive.",
     inputSchema: {
       type: "object",
       properties: {

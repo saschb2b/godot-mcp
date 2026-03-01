@@ -547,18 +547,34 @@ export async function handleSendKeySequence(
   try {
     // Estimate timeout from sequence content
     const estimatedMs = args.keys.reduce((acc: number, k: unknown) => {
-      if (typeof k === "object" && k !== null && "wait" in k)
-        return acc + (k as { wait: number }).wait;
+      if (typeof k === "object" && k !== null) {
+        if ("wait" in k) return acc + (k as { wait: number }).wait;
+        if ("screenshot" in k) return acc + 500; // screenshot takes ~500ms
+        if ("state" in k) return acc + 50; // state snapshot is fast
+      }
       return acc + (args.delayMs ?? args.delay_ms ?? 50);
     }, 0);
 
+    const command: Record<string, unknown> = {
+      type: "send_key_sequence",
+      keys: args.keys,
+      delay_ms: args.delayMs ?? args.delay_ms ?? 50,
+    };
+
+    // Pass through signal collection config
+    const collectSignals = args.collectSignals ?? args.collect_signals;
+    if (collectSignals && Array.isArray(collectSignals)) {
+      command.collect_signals = collectSignals.map(
+        (s: { nodePath?: string; node_path?: string; signals: string[] }) => ({
+          node_path: s.nodePath ?? s.node_path,
+          signals: s.signals,
+        }),
+      );
+    }
+
     const response = await sendTcpCommand(
       ctx,
-      {
-        type: "send_key_sequence",
-        keys: args.keys,
-        delay_ms: args.delayMs ?? args.delay_ms ?? 50,
-      },
+      command,
       Math.max(estimatedMs + 5000, 10000),
     );
     return {
@@ -649,6 +665,67 @@ export async function handleExecuteScript(
       },
       15000,
     );
+    return {
+      content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return createErrorResponse(msg, [
+      "Ensure the game is running via run_interactive",
+    ]);
+  }
+}
+
+export async function handleSendJoypadButton(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  if (!args?.button) {
+    return createErrorResponse("Missing required parameter: button", [
+      'Provide the joypad button name (e.g., "a", "b", "x", "y", "lb", "rb", "dpad_up", "start")',
+    ]);
+  }
+
+  try {
+    const response = await sendTcpCommand(ctx, {
+      type: "send_joypad_button",
+      button: args.button,
+      pressed: args.pressed !== false,
+      device: args.device ?? 0,
+    });
+    return {
+      content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return createErrorResponse(msg, [
+      "Ensure the game is running via run_interactive",
+    ]);
+  }
+}
+
+export async function handleSendJoypadMotion(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  if (!args?.axis) {
+    return createErrorResponse("Missing required parameter: axis", [
+      'Provide the joypad axis name (e.g., "left_x", "left_y", "right_x", "right_y", "trigger_left", "trigger_right")',
+    ]);
+  }
+  if (args?.value === undefined) {
+    return createErrorResponse("Missing required parameter: value", [
+      "Provide the axis value as a float (-1.0 to 1.0 for sticks, 0.0 to 1.0 for triggers)",
+    ]);
+  }
+
+  try {
+    const response = await sendTcpCommand(ctx, {
+      type: "send_joypad_motion",
+      axis: args.axis,
+      value: args.value,
+      device: args.device ?? 0,
+    });
     return {
       content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
     };

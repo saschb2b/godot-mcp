@@ -22,12 +22,14 @@ extends Node
 #   {"type": "get_performance_metrics"}
 #   {"type": "reset_scene"}
 #   {"type": "get_runtime_errors", "clear": true}
-#   {"type": "send_key_sequence", "keys": ["a", "b", {"wait": 500}, "c"], "delay_ms": 50}
+#   {"type": "send_key_sequence", "keys": ["a", {"screenshot": "path.png"}, "b", {"wait": 500}, {"state": true}, "c"], "delay_ms": 50, "collect_signals": [{"node_path": "/root/EventBus", "signals": ["task_completed"]}]}
 #   {"type": "pause_game", "paused": true}
 #   {"type": "set_property", "node_path": "Player", "property": "health", "value": 100}
 #   {"type": "execute_script", "code": "var p = $Player\nreturn p.position"}
 #   {"type": "subscribe_signals", "node_path": "/root/EventBus", "signals": ["score_changed"]}
 #   {"type": "get_signal_events", "clear": true}
+#   {"type": "send_joypad_button", "button": "a", "pressed": true}
+#   {"type": "send_joypad_motion", "axis": "left_x", "value": 0.75}
 
 
 # Custom Logger that buffers runtime errors/warnings (Godot 4.5+)
@@ -211,6 +213,10 @@ func _dispatch(json_str: String) -> void:
 			_handle_subscribe_signals(data)
 		"get_signal_events":
 			_handle_get_signal_events(data)
+		"send_joypad_button":
+			_handle_send_joypad_button(data)
+		"send_joypad_motion":
+			_handle_send_joypad_motion(data)
 		_:
 			# Default: treat as input action
 			_handle_input(data)
@@ -238,19 +244,13 @@ func _handle_input(data: Dictionary) -> void:
 	Input.flush_buffered_events()
 
 
-func _handle_screenshot(data: Dictionary) -> void:
-	var output_path: String = data.get("output_path", "")
-	if output_path.is_empty():
-		_send_response({"error": "Missing output_path"})
-		return
-
-	# Wait one frame for rendering
+func _capture_screenshot_inline(output_path: String) -> Dictionary:
+	## Captures viewport to PNG and returns {ok, path, size} or {error}.
 	await get_tree().process_frame
 
 	var image: Image = get_viewport().get_texture().get_image()
 	if image == null:
-		_send_response({"error": "Failed to capture viewport"})
-		return
+		return {"error": "Failed to capture viewport"}
 
 	var dir_path := output_path.get_base_dir()
 	if not dir_path.is_empty():
@@ -258,13 +258,27 @@ func _handle_screenshot(data: Dictionary) -> void:
 
 	var save_err := image.save_png(output_path)
 	if save_err != OK:
-		_send_response({"error": "Failed to save: " + str(save_err)})
+		return {"error": "Failed to save: " + str(save_err)}
+
+	return {"ok": true, "path": output_path, "size": str(image.get_width()) + "x" + str(image.get_height())}
+
+
+func _handle_screenshot(data: Dictionary) -> void:
+	var output_path: String = data.get("output_path", "")
+	if output_path.is_empty():
+		_send_response({"error": "Missing output_path"})
 		return
 
-	_send_response({"ok": true, "type": "screenshot", "path": output_path, "size": str(image.get_width()) + "x" + str(image.get_height())})
+	var result := await _capture_screenshot_inline(output_path)
+	if result.has("error"):
+		_send_response(result)
+		return
+	result["type"] = "screenshot"
+	_send_response(result)
 
 
-func _handle_get_state() -> void:
+func _collect_state() -> Dictionary:
+	## Builds and returns the game state dictionary.
 	var state := {}
 	var scene := get_tree().current_scene
 
@@ -283,7 +297,11 @@ func _handle_get_state() -> void:
 		if player and "grid_pos" in player:
 			state["player_pos"] = str(player.grid_pos)
 
-	_send_response({"ok": true, "type": "state", "state": state})
+	return state
+
+
+func _handle_get_state() -> void:
+	_send_response({"ok": true, "type": "state", "state": _collect_state()})
 
 
 func _handle_call_method(data: Dictionary) -> void:
@@ -620,16 +638,75 @@ func _handle_send_key_sequence(data: Dictionary) -> void:
 	var default_delay_ms: int = data.get("delay_ms", 50)
 	var keys_sent: int = 0
 
+	# --- Phase 1: Subscribe to signals for event collection ---
+	var collect_signals: Array = data.get("collect_signals", [])
+	var seq_events: Array = []
+	var seq_subscriptions: Array = []  # [{node, signal, callable}]
+
+	for sub_def in collect_signals:
+		if sub_def is not Dictionary:
+			continue
+		var node_path_str: String = sub_def.get("node_path", "")
+		if node_path_str.is_empty():
+			continue
+		var sig_names: Array = sub_def.get("signals", [])
+		if sig_names.is_empty():
+			continue
+
+		var scene := get_tree().current_scene
+		var target: Node = null
+		if scene:
+			target = scene.get_node_or_null(NodePath(node_path_str))
+		if not target:
+			target = get_node_or_null(NodePath(node_path_str))
+		if not target:
+			continue
+
+		for sig_name in sig_names:
+			if not target.has_signal(sig_name):
+				continue
+			var cb := func(_a1 = null, _a2 = null, _a3 = null, _a4 = null, _a5 = null, _a6 = null):
+				var args_arr: Array = []
+				for a in [_a1, _a2, _a3, _a4, _a5, _a6]:
+					if a != null:
+						args_arr.append(_serialize_value(a))
+				seq_events.append({
+					"signal": sig_name,
+					"node": node_path_str,
+					"args": args_arr,
+					"time": Time.get_ticks_msec(),
+				})
+			target.connect(sig_name, cb)
+			seq_subscriptions.append({"node": target, "signal": sig_name, "callable": cb})
+
+	# --- Phase 2: Process keys array ---
+	var screenshots: Array = []
+	var states: Array = []
+
 	for item in keys:
 		if item is Dictionary:
-			# Wait command: {"wait": 500}
-			var wait_ms: int = item.get("wait", 0)
-			if wait_ms > 0:
-				await get_tree().create_timer(wait_ms / 1000.0).timeout
+			if item.has("wait"):
+				# Wait command: {"wait": 500}
+				var wait_ms: int = item.get("wait", 0)
+				if wait_ms > 0:
+					await get_tree().create_timer(wait_ms / 1000.0).timeout
+			elif item.has("screenshot"):
+				# Screenshot checkpoint: {"screenshot": "path.png"}
+				var path: String = item.get("screenshot", "")
+				if not path.is_empty():
+					var result := await _capture_screenshot_inline(path)
+					if result.get("ok", false):
+						screenshots.append({"path": result["path"], "size": result["size"], "index": keys_sent})
+			elif item.has("state"):
+				# State snapshot: {"state": true}
+				var state := _collect_state()
+				states.append({"state": state, "index": keys_sent, "time": Time.get_ticks_msec()})
 		elif item is String:
 			var key_str: String = item
 			var keycode := OS.find_keycode_from_string(key_str)
 			if keycode == KEY_NONE:
+				# Cleanup before error response
+				_cleanup_seq_subscriptions(seq_subscriptions)
 				_send_response({"error": "Unknown key in sequence: " + key_str, "keys_sent": keys_sent})
 				return
 
@@ -658,7 +735,97 @@ func _handle_send_key_sequence(data: Dictionary) -> void:
 			if default_delay_ms > 0:
 				await get_tree().create_timer(default_delay_ms / 1000.0).timeout
 
-	_send_response({"ok": true, "type": "send_key_sequence", "keys_sent": keys_sent})
+	# --- Phase 3: Cleanup signal subscriptions ---
+	_cleanup_seq_subscriptions(seq_subscriptions)
+
+	# --- Phase 4: Build response (backward compatible) ---
+	var response := {"ok": true, "type": "send_key_sequence", "keys_sent": keys_sent}
+	if not seq_events.is_empty():
+		response["events"] = seq_events
+	if not screenshots.is_empty():
+		response["screenshots"] = screenshots
+	if not states.is_empty():
+		response["states"] = states
+	_send_response(response)
+
+
+func _cleanup_seq_subscriptions(subscriptions: Array) -> void:
+	for sub in subscriptions:
+		var node: Node = sub["node"]
+		if is_instance_valid(node) and node.is_connected(sub["signal"], sub["callable"]):
+			node.disconnect(sub["signal"], sub["callable"])
+
+
+func _handle_send_joypad_button(data: Dictionary) -> void:
+	var button_str: String = data.get("button", "")
+	if button_str.is_empty():
+		_send_response({"error": "Missing button"})
+		return
+
+	var button_map := {
+		"a": JOY_BUTTON_A, "b": JOY_BUTTON_B,
+		"x": JOY_BUTTON_X, "y": JOY_BUTTON_Y,
+		"lb": JOY_BUTTON_LEFT_SHOULDER, "left_shoulder": JOY_BUTTON_LEFT_SHOULDER,
+		"rb": JOY_BUTTON_RIGHT_SHOULDER, "right_shoulder": JOY_BUTTON_RIGHT_SHOULDER,
+		"lt": JOY_BUTTON_LEFT_STICK, "left_stick": JOY_BUTTON_LEFT_STICK,
+		"rt": JOY_BUTTON_RIGHT_STICK, "right_stick": JOY_BUTTON_RIGHT_STICK,
+		"back": JOY_BUTTON_BACK, "select": JOY_BUTTON_BACK,
+		"start": JOY_BUTTON_START, "guide": JOY_BUTTON_GUIDE,
+		"dpad_up": JOY_BUTTON_DPAD_UP, "dpad_down": JOY_BUTTON_DPAD_DOWN,
+		"dpad_left": JOY_BUTTON_DPAD_LEFT, "dpad_right": JOY_BUTTON_DPAD_RIGHT,
+		"misc1": JOY_BUTTON_MISC1,
+		"paddle1": JOY_BUTTON_PADDLE1, "paddle2": JOY_BUTTON_PADDLE2,
+		"paddle3": JOY_BUTTON_PADDLE3, "paddle4": JOY_BUTTON_PADDLE4,
+		"touchpad": JOY_BUTTON_TOUCHPAD,
+	}
+
+	var key := button_str.to_lower()
+	if key not in button_map:
+		_send_response({"error": "Unknown joypad button: " + button_str + ". Valid: " + ", ".join(button_map.keys())})
+		return
+
+	var pressed: bool = data.get("pressed", true)
+	var device: int = data.get("device", 0)
+
+	var event := InputEventJoypadButton.new()
+	event.device = device
+	event.button_index = button_map[key]
+	event.pressed = pressed
+	event.pressure = 1.0 if pressed else 0.0
+
+	_send_response({"ok": true, "type": "send_joypad_button", "button": button_str, "pressed": pressed, "device": device})
+	get_viewport().push_input(event)
+	Input.flush_buffered_events()
+
+
+func _handle_send_joypad_motion(data: Dictionary) -> void:
+	var axis_str: String = data.get("axis", "")
+	if axis_str.is_empty():
+		_send_response({"error": "Missing axis"})
+		return
+
+	var axis_map := {
+		"left_x": JOY_AXIS_LEFT_X, "left_y": JOY_AXIS_LEFT_Y,
+		"right_x": JOY_AXIS_RIGHT_X, "right_y": JOY_AXIS_RIGHT_Y,
+		"trigger_left": JOY_AXIS_TRIGGER_LEFT, "trigger_right": JOY_AXIS_TRIGGER_RIGHT,
+	}
+
+	var key := axis_str.to_lower()
+	if key not in axis_map:
+		_send_response({"error": "Unknown joypad axis: " + axis_str + ". Valid: " + ", ".join(axis_map.keys())})
+		return
+
+	var value: float = data.get("value", 0.0)
+	var device: int = data.get("device", 0)
+
+	var event := InputEventJoypadMotion.new()
+	event.device = device
+	event.axis = axis_map[key]
+	event.axis_value = value
+
+	_send_response({"ok": true, "type": "send_joypad_motion", "axis": axis_str, "value": value, "device": device})
+	get_viewport().push_input(event)
+	Input.flush_buffered_events()
 
 
 func _handle_pause_game(data: Dictionary) -> void:

@@ -113,6 +113,8 @@ const HANDLER_MAP: Record<string, HandlerFn> = {
   execute_script: interactiveHandlers.handleExecuteScript,
   subscribe_signals: interactiveHandlers.handleSubscribeSignals,
   get_signal_events: interactiveHandlers.handleGetSignalEvents,
+  send_joypad_button: interactiveHandlers.handleSendJoypadButton,
+  send_joypad_motion: interactiveHandlers.handleSendJoypadMotion,
 
   // Screenshots
   capture_screenshot: screenshotHandlers.handleCaptureScreenshot,
