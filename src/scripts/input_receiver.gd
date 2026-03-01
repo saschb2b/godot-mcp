@@ -191,6 +191,8 @@ func _dispatch(json_str: String) -> void:
 			_handle_send_mouse_click(data)
 		"send_mouse_drag":
 			_handle_send_mouse_drag(data)
+		"send_mouse_motion":
+			_handle_send_mouse_motion(data)
 		"wait_for_signal":
 			_handle_wait_for_signal(data)
 		"wait_for_node":
@@ -435,6 +437,22 @@ func _handle_send_mouse_click(data: Dictionary) -> void:
 	release.button_index = button_index
 	release.pressed = false
 	get_viewport().push_input(release)
+
+	Input.flush_buffered_events()
+
+
+func _handle_send_mouse_motion(data: Dictionary) -> void:
+	var x: float = data.get("x", 0.0)
+	var y: float = data.get("y", 0.0)
+	var pos := Vector2(x, y)
+
+	# Send response before flushing — flush can trigger scene changes
+	_send_response({"ok": true, "type": "send_mouse_motion", "x": x, "y": y})
+
+	var motion := InputEventMouseMotion.new()
+	motion.position = pos
+	motion.global_position = pos
+	get_viewport().push_input(motion)
 
 	Input.flush_buffered_events()
 

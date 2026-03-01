@@ -100,6 +100,7 @@ const HANDLER_MAP: Record<string, HandlerFn> = {
   evaluate_expression: interactiveHandlers.handleEvaluateExpression,
   send_key: interactiveHandlers.handleSendKey,
   send_mouse_click: interactiveHandlers.handleSendMouseClick,
+  send_mouse_motion: interactiveHandlers.handleSendMouseMotion,
   send_mouse_drag: interactiveHandlers.handleSendMouseDrag,
   wait_for_signal: interactiveHandlers.handleWaitForSignal,
   wait_for_node: interactiveHandlers.handleWaitForNode,

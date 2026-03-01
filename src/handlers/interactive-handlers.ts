@@ -336,6 +336,33 @@ export async function handleSendMouseClick(
   }
 }
 
+export async function handleSendMouseMotion(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  if (args?.x == null || args?.y == null) {
+    return createErrorResponse("Missing required parameters: x and y", [
+      "Provide the x and y coordinates for the mouse position",
+    ]);
+  }
+
+  try {
+    const response = await sendTcpCommand(ctx, {
+      type: "send_mouse_motion",
+      x: args.x,
+      y: args.y,
+    });
+    return {
+      content: [{ type: "text", text: JSON.stringify(response, null, 2) }],
+    };
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : "Unknown error";
+    return createErrorResponse(msg, [
+      "Ensure the game is running via run_interactive",
+    ]);
+  }
+}
+
 export async function handleSendMouseDrag(
   ctx: ServerContext,
   args: any,

@@ -9,6 +9,7 @@ import {
   handleEvaluateExpression,
   handleSendKey,
   handleSendMouseClick,
+  handleSendMouseMotion,
   handleSendMouseDrag,
   handleWaitForSignal,
   handleWaitForNode,
@@ -157,6 +158,20 @@ describe("Interactive handlers", () => {
 
     it("errors when no game is running", async () => {
       const res = await handleSendMouseClick(ctx, { x: 100, y: 200 });
+      assertError(res);
+      expect(res.content[0]!.text).toContain("run_interactive");
+    });
+  });
+
+  describe("send_mouse_motion", () => {
+    it("errors on missing coordinates", async () => {
+      const res = await handleSendMouseMotion(ctx, {});
+      assertError(res);
+      expect(res.content[0]!.text).toContain("x and y");
+    });
+
+    it("errors when no game is running", async () => {
+      const res = await handleSendMouseMotion(ctx, { x: 100, y: 200 });
       assertError(res);
       expect(res.content[0]!.text).toContain("run_interactive");
     });

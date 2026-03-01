@@ -1506,6 +1506,27 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
   },
   {
+    name: "send_mouse_motion",
+    category: "interactive",
+    readOnly: false,
+    description:
+      "Move the mouse cursor to specific coordinates in a running interactive Godot project via TCP. Sends an InputEventMouseMotion without any button press. Use for hover effects, aiming, cursor tracking, tooltip triggers, and any game that responds to mouse position. For click or drag, use send_mouse_click or send_mouse_drag instead. The project must be running via run_interactive.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        x: {
+          type: "number",
+          description: "X coordinate in viewport pixels.",
+        },
+        y: {
+          type: "number",
+          description: "Y coordinate in viewport pixels.",
+        },
+      },
+      required: ["x", "y"],
+    },
+  },
+  {
     name: "send_mouse_drag",
     category: "interactive",
     readOnly: false,
