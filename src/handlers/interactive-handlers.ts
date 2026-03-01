@@ -19,6 +19,21 @@ import { spawn } from "child_process";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+/**
+ * Force windowed mode in project.godot content.
+ * Fullscreen (mode=3 or mode=4) blocks TCP communication with the input receiver.
+ * We override to windowed (mode=0) so interactive testing works reliably.
+ * The original project.godot is restored on cleanup.
+ */
+export function forceWindowedMode(content: string): string {
+  // Replace existing window mode setting (mode=3 fullscreen, mode=4 exclusive fullscreen)
+  const modeRegex = /^(display\/window\/size\/mode\s*=\s*)[34]\s*$/m;
+  if (modeRegex.test(content)) {
+    return content.replace(modeRegex, "$10");
+  }
+  return content;
+}
+
 export async function handleRunInteractive(
   ctx: ServerContext,
   args: any,
@@ -61,6 +76,10 @@ export async function handleRunInteractive(
       projectContent +
       `\n[autoload]\n\n_McpInputReceiver="*res://${scriptFilename}"\n`;
   }
+
+  // Force windowed mode so TCP input works reliably (fullscreen blocks it)
+  modifiedContent = forceWindowedMode(modifiedContent);
+
   writeFileSync(projectFile, modifiedContent);
 
   // Disconnect any existing TCP connection and kill existing process

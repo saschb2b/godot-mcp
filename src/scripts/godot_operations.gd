@@ -125,11 +125,74 @@ func _init():
             get_scene_insights(params)
         "get_node_insights":
             get_node_insights(params)
+        "batch":
+            batch_operations(params)
         _:
             log_error("Unknown operation: " + operation)
             quit(1)
-    
+
     quit()
+
+
+func _execute_single(op_name: String, op_params: Dictionary) -> void:
+    ## Dispatch a single operation by name. Used by batch_operations.
+    match op_name:
+        "create_scene": create_scene(op_params)
+        "add_node": add_node(op_params)
+        "load_sprite": load_sprite(op_params)
+        "save_scene": save_scene(op_params)
+        "set_cells": set_cells(op_params)
+        "get_scene_tree": get_scene_tree(op_params)
+        "set_node_properties": set_node_properties(op_params)
+        "attach_script": attach_script(op_params)
+        "create_resource": create_resource(op_params)
+        "edit_project_settings": edit_project_settings(op_params)
+        "remove_node": remove_node(op_params)
+        "reparent_node": reparent_node(op_params)
+        "connect_signal": connect_signal_op(op_params)
+        "get_tile_data": get_tile_data(op_params)
+        "create_tileset": create_tileset(op_params)
+        "validate_scene": validate_scene(op_params)
+        "add_to_group": add_to_group(op_params)
+        "remove_from_group": remove_from_group(op_params)
+        "instantiate_scene": instantiate_scene(op_params)
+        "add_animation": add_animation(op_params)
+        "set_custom_tile_data": set_custom_tile_data(op_params)
+        "duplicate_node": duplicate_node_op(op_params)
+        "rename_node": rename_node(op_params)
+        "get_node_properties": get_node_properties(op_params)
+        "create_animation_player": create_animation_player(op_params)
+        "manage_autoloads": manage_autoloads(op_params)
+        "set_collision_layer_mask": set_collision_layer_mask(op_params)
+        _:
+            log_error("Unknown operation in batch: " + op_name)
+
+
+func batch_operations(params: Dictionary) -> void:
+    ## Execute multiple operations in a single Godot process invocation.
+    var operations: Array = params.get("operations", [])
+    if operations.is_empty():
+        log_error("No operations provided in batch")
+        return
+
+    log_info("Executing batch of " + str(operations.size()) + " operations")
+    var results := []
+
+    for i in range(operations.size()):
+        var op: Dictionary = operations[i]
+        var op_name: String = op.get("operation", "")
+        var op_params: Dictionary = op.get("params", {})
+
+        if op_name.is_empty():
+            log_error("Operation " + str(i) + " missing 'operation' field")
+            results.append({"index": i, "error": "missing operation name"})
+            continue
+
+        log_info("Batch step " + str(i) + ": " + op_name)
+        _execute_single(op_name, op_params)
+        results.append({"index": i, "operation": op_name, "ok": true})
+
+    print(JSON.stringify({"batch_results": results, "total": operations.size()}))
 
 # Logging functions
 func log_debug(message):

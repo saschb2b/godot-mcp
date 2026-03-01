@@ -6,6 +6,7 @@ import {
   handleSaveScene,
   handleGetSceneTree,
   handleValidateScene,
+  handleBatchOperations,
 } from "../../src/handlers/scene-handlers.js";
 import { initContext, FIXTURE_PATH } from "../setup.js";
 import { assertSuccess, assertError, TestCleanup } from "../helpers.js";
@@ -88,5 +89,63 @@ describe("Scene handlers", () => {
     });
     assertSuccess(res);
     expect(existsSync(join(FIXTURE_PATH, "scenes/main_copy.tscn"))).toBe(true);
+  });
+
+  describe("batch_operations", () => {
+    it("errors on missing projectPath", async () => {
+      const res = await handleBatchOperations(ctx, {});
+      assertError(res);
+    });
+
+    it("errors on missing operations array", async () => {
+      const res = await handleBatchOperations(ctx, {
+        projectPath: FIXTURE_PATH,
+      });
+      assertError(res);
+    });
+
+    it("errors on empty operations array", async () => {
+      const res = await handleBatchOperations(ctx, {
+        projectPath: FIXTURE_PATH,
+        operations: [],
+      });
+      assertError(res);
+    });
+
+    it("errors on invalid project path", async () => {
+      const res = await handleBatchOperations(ctx, {
+        projectPath: "/nonexistent",
+        operations: [{ operation: "get_scene_tree", params: {} }],
+      });
+      assertError(res);
+    });
+
+    it("executes multiple operations in one process", async () => {
+      cleanup.track("scenes/batch_test.tscn");
+      const res = await handleBatchOperations(ctx, {
+        projectPath: FIXTURE_PATH,
+        operations: [
+          {
+            operation: "create_scene",
+            params: {
+              scenePath: "scenes/batch_test.tscn",
+              rootNodeType: "Node2D",
+            },
+          },
+          {
+            operation: "add_node",
+            params: {
+              scenePath: "scenes/batch_test.tscn",
+              nodeType: "Sprite2D",
+              nodeName: "MySprite",
+            },
+          },
+        ],
+      });
+      assertSuccess(res);
+      expect(existsSync(join(FIXTURE_PATH, "scenes/batch_test.tscn"))).toBe(
+        true,
+      );
+    });
   });
 });

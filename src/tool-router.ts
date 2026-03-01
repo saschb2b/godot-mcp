@@ -43,6 +43,7 @@ const HANDLER_MAP: Record<string, HandlerFn> = {
   save_scene: sceneHandlers.handleSaveScene,
   get_scene_tree: sceneHandlers.handleGetSceneTree,
   validate_scene: sceneHandlers.handleValidateScene,
+  batch_operations: sceneHandlers.handleBatchOperations,
 
   // Node operations
   add_node: nodeHandlers.handleAddNode,

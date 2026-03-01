@@ -4,6 +4,7 @@ import {
   normalizeParameters,
   validatePath,
   createErrorResponse,
+  convertCamelToSnakeCase,
 } from "../utils.js";
 import { executeOperation } from "../godot-executor.js";
 import { join } from "path";
@@ -292,6 +293,85 @@ export async function handleValidateScene(
   } catch (error: any) {
     return createErrorResponse(
       `Failed to validate scene: ${error?.message ?? "Unknown error"}`,
+      ["Ensure Godot is installed correctly"],
+    );
+  }
+}
+
+export async function handleBatchOperations(
+  ctx: ServerContext,
+  args: any,
+): Promise<ToolResponse> {
+  args = normalizeParameters(args);
+
+  if (!args.projectPath) {
+    return createErrorResponse("Missing required parameter: projectPath", [
+      "Provide the path to the Godot project directory",
+    ]);
+  }
+
+  if (!validatePath(args.projectPath)) {
+    return createErrorResponse("Invalid project path", [
+      'Provide a valid path without ".."',
+    ]);
+  }
+
+  if (!args.operations || !Array.isArray(args.operations)) {
+    return createErrorResponse("Missing required parameter: operations", [
+      "Provide an array of operations to execute",
+      'Each operation must have "operation" (string) and "params" (object)',
+    ]);
+  }
+
+  if (args.operations.length === 0) {
+    return createErrorResponse("Operations array is empty", [
+      "Provide at least one operation to execute",
+    ]);
+  }
+
+  try {
+    const projectFile = join(args.projectPath, "project.godot");
+    if (!existsSync(projectFile)) {
+      return createErrorResponse(
+        `Not a valid Godot project: ${args.projectPath}`,
+        ["Ensure the path contains a project.godot file"],
+      );
+    }
+
+    // Convert each operation's params from camelCase to snake_case
+    const operations = args.operations.map(
+      (op: { operation: string; params?: Record<string, unknown> }) => ({
+        operation: op.operation,
+        params: op.params ? convertCamelToSnakeCase(op.params) : {},
+      }),
+    );
+
+    const { stdout, stderr } = await executeOperation(
+      ctx,
+      "batch",
+      { operations },
+      args.projectPath,
+    );
+
+    if (stderr.includes("Failed to")) {
+      return createErrorResponse(`Batch operation failed: ${stderr}`, [
+        "Check that all operations and their parameters are valid",
+      ]);
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text:
+            stdout ||
+            `Batch of ${args.operations.length} operations completed.`,
+        },
+      ],
+    };
+  } catch (error: any) {
+    return createErrorResponse(
+      `Batch operations failed: ${error?.message ?? "Unknown error"}`,
       ["Ensure Godot is installed correctly"],
     );
   }

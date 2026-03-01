@@ -281,25 +281,60 @@ func _handle_screenshot(data: Dictionary) -> void:
 
 func _collect_state() -> Dictionary:
 	## Builds and returns the game state dictionary.
+	## Auto-discovers all autoload singletons and their script-defined properties.
 	var state := {}
 	var scene := get_tree().current_scene
 
 	if scene:
 		state["scene"] = scene.name
 
-		# Try to read common game state from autoloads
-		var game_state_node := get_node_or_null("/root/GameState")
-		if game_state_node:
-			for prop in ["health", "max_health", "score", "turn", "current_level", "game_over"]:
-				if prop in game_state_node:
-					state[prop] = game_state_node.get(prop)
+	# Auto-discover all user autoload singletons
+	var autoloads := {}
+	for child in get_tree().root.get_children():
+		# Skip the current scene and internal MCP nodes
+		if child == scene:
+			continue
+		if child.name.begins_with("_"):
+			continue
+		var props := _collect_node_state(child)
+		if not props.is_empty():
+			autoloads[child.name] = props
+	if not autoloads.is_empty():
+		state["autoloads"] = autoloads
 
-		# Try to get player position
+	# Try to get player position (common pattern)
+	if scene:
 		var player := scene.get_node_or_null("Player")
-		if player and "grid_pos" in player:
-			state["player_pos"] = str(player.grid_pos)
+		if player:
+			if "position" in player:
+				state["player_position"] = str(player.position)
+			if "grid_pos" in player:
+				state["player_grid_pos"] = str(player.grid_pos)
 
 	return state
+
+
+func _collect_node_state(node: Node) -> Dictionary:
+	## Collects all non-default, non-internal properties from a node's script.
+	var result := {}
+	var script: Script = node.get_script()
+	if not script:
+		return result
+
+	var prop_list := node.get_property_list()
+	for prop in prop_list:
+		var name: String = prop["name"]
+		# Skip internal/private properties
+		if name.begins_with("_") or name.begins_with("metadata/"):
+			continue
+		# Only include script-defined variables (PROPERTY_USAGE_SCRIPT_VARIABLE = 8192)
+		var usage: int = prop["usage"]
+		if not (usage & PROPERTY_USAGE_SCRIPT_VARIABLE):
+			continue
+		var value = node.get(name)
+		result[name] = _serialize_value(value)
+
+	return result
 
 
 func _handle_get_state() -> void:

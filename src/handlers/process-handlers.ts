@@ -8,6 +8,7 @@ import {
   killProcess,
 } from "../utils.js";
 import { ensureGodotPath } from "../godot-path.js";
+import { cleanupInteractive, disconnectTcp } from "../tcp-client.js";
 import { join } from "path";
 import { existsSync } from "fs";
 import { spawn } from "child_process";
@@ -207,8 +208,14 @@ export async function handleStopProject(
   logDebug(ctx.debugMode, "Stopping active Godot process");
   const output = ctx.activeProcess.output;
   const errors = ctx.activeProcess.errors;
+
+  // Disconnect TCP before killing process to avoid race with exit handler
+  disconnectTcp(ctx);
   await killProcess(ctx.activeProcess.process);
   ctx.activeProcess = null;
+
+  // Clean up interactive mode artifacts (autoload injection, receiver script)
+  cleanupInteractive(ctx);
 
   return {
     content: [

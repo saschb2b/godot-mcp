@@ -698,6 +698,44 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
   },
   {
+    name: "batch_operations",
+    category: "scene",
+    readOnly: false,
+    description:
+      "Execute multiple scene operations in a single Godot process invocation. Much faster than calling individual tools (add_node, set_node_properties, attach_script, etc.) one by one, since each individual call spawns a separate Godot process. Use this when you need to perform 3+ scene operations on the same project.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectPath: {
+          type: "string",
+          description: "Path to the Godot project directory",
+        },
+        operations: {
+          type: "array",
+          description:
+            "Array of operations to execute sequentially in one process",
+          items: {
+            type: "object",
+            properties: {
+              operation: {
+                type: "string",
+                description:
+                  'The operation name (e.g., "add_node", "set_node_properties", "attach_script", "connect_signal")',
+              },
+              params: {
+                type: "object",
+                description:
+                  "Parameters for the operation (same as the individual tool, minus projectPath)",
+              },
+            },
+            required: ["operation", "params"],
+          },
+        },
+      },
+      required: ["projectPath", "operations"],
+    },
+  },
+  {
     name: "get_uid",
     category: "uid",
     readOnly: true,
