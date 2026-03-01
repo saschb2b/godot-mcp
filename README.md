@@ -398,6 +398,7 @@ The TCP connection is persistent (single socket reused across commands). Everyth
 `send_key_sequence` is the primary tool for gameplay testing. It bundles keys, state snapshots, screenshots, and signal collection into a single round-trip — much faster than calling individual tools in a loop.
 
 **Fast gameplay test (1 round-trip):**
+
 ```
 send_key_sequence({
   keys: ["1", "a", {"state": true}, "o", {"wait": 2000}, {"screenshot": "mid.png"}, "s"],
@@ -411,6 +412,7 @@ send_key_sequence({
 ```
 
 **Avoid these slower patterns:**
+
 ```
 // BAD: 3 round-trips for the same result
 subscribe_signals({nodePath: "/root/EventBus", signals: ["task_completed"]})

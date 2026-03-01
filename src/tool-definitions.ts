@@ -1824,7 +1824,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "interactive",
     readOnly: false,
     description:
-      'Send a gamepad/controller button event to a running interactive Godot project. Supports standard gamepad buttons (A, B, X, Y, shoulders, dpad, start, back, sticks, paddles, touchpad). For games using Godot input actions, prefer send_input instead. The project must be running via run_interactive.',
+      "Send a gamepad/controller button event to a running interactive Godot project. Supports standard gamepad buttons (A, B, X, Y, shoulders, dpad, start, back, sticks, paddles, touchpad). For games using Godot input actions, prefer send_input instead. The project must be running via run_interactive.",
     inputSchema: {
       type: "object",
       properties: {
@@ -1853,7 +1853,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     category: "interactive",
     readOnly: false,
     description:
-      'Send a gamepad analog stick or trigger axis event to a running interactive Godot project. Simulates analog input with float precision. For games using Godot input actions, prefer send_input with a strength parameter instead. The project must be running via run_interactive.',
+      "Send a gamepad analog stick or trigger axis event to a running interactive Godot project. Simulates analog input with float precision. For games using Godot input actions, prefer send_input with a strength parameter instead. The project must be running via run_interactive.",
     inputSchema: {
       type: "object",
       properties: {

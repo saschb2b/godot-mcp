@@ -579,13 +579,14 @@ export async function handleSendKeySequence(
         if ("screenshot" in k) return acc + 500; // screenshot takes ~500ms
         if ("state" in k) return acc + 50; // state snapshot is fast
       }
-      return acc + (args.delayMs ?? args.delay_ms ?? 50);
+      return acc + Number(args.delayMs ?? args.delay_ms ?? 50);
     }, 0);
 
+    const delayMs = Number(args.delayMs ?? args.delay_ms ?? 50);
     const command: Record<string, unknown> = {
       type: "send_key_sequence",
       keys: args.keys,
-      delay_ms: args.delayMs ?? args.delay_ms ?? 50,
+      delay_ms: delayMs,
     };
 
     // Pass through signal collection config
@@ -602,7 +603,7 @@ export async function handleSendKeySequence(
     const response = await sendTcpCommand(
       ctx,
       command,
-      Math.max(estimatedMs + 5000, 10000),
+      Math.max((estimatedMs as number) + 5000, 10000),
     );
     return {
       content: [{ type: "text", text: JSON.stringify(response, null, 2) }],

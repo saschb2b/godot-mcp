@@ -7,7 +7,7 @@ import {
 } from "../utils.js";
 import { executeOperation } from "../godot-executor.js";
 import { join, dirname } from "path";
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
+import { existsSync, writeFileSync, mkdirSync } from "fs";
 
 export async function handleReadScript(
   ctx: ServerContext,
@@ -169,13 +169,16 @@ export async function handleValidateScript(
     );
 
     const output = stdout.trim();
-    const hasErrors = stderr.includes("SCRIPT_ERROR") || output.includes('"errors"');
+    const hasErrors =
+      stderr.includes("SCRIPT_ERROR") || output.includes('"errors"');
 
     return {
       content: [
         {
           type: "text",
-          text: output || (hasErrors ? stderr : "Script is valid: no errors found."),
+          text:
+            output ||
+            (hasErrors ? stderr : "Script is valid: no errors found."),
         },
       ],
     };
