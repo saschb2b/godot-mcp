@@ -61,8 +61,8 @@ describe("Scene handlers", () => {
     assertError(res);
   });
 
-  it("reads scene tree", async () => {
-    const res = await handleGetSceneTree(ctx, {
+  it("reads scene tree", () => {
+    const res = handleGetSceneTree(ctx, {
       projectPath: FIXTURE_PATH,
       scenePath: "scenes/with_nodes.tscn",
     });

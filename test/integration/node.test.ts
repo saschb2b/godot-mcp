@@ -46,7 +46,7 @@ describe("Node handlers", () => {
     });
     assertSuccess(res);
 
-    const tree = await handleGetSceneTree(ctx, {
+    const tree = handleGetSceneTree(ctx, {
       projectPath: FIXTURE_PATH,
       scenePath: TEMP_SCENE,
     });
@@ -61,7 +61,7 @@ describe("Node handlers", () => {
     });
     assertSuccess(res);
 
-    const tree = await handleGetSceneTree(ctx, {
+    const tree = handleGetSceneTree(ctx, {
       projectPath: FIXTURE_PATH,
       scenePath: TEMP_SCENE,
     });
@@ -87,7 +87,7 @@ describe("Node handlers", () => {
     });
     assertSuccess(res);
 
-    const tree = await handleGetSceneTree(ctx, {
+    const tree = handleGetSceneTree(ctx, {
       projectPath: FIXTURE_PATH,
       scenePath: TEMP_SCENE,
     });

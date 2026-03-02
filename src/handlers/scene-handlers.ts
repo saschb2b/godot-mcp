@@ -8,7 +8,7 @@ import {
 } from "../utils.js";
 import { executeOperation } from "../godot-executor.js";
 import { join } from "path";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 
 export async function handleCreateScene(
   ctx: ServerContext,
@@ -182,10 +182,160 @@ export async function handleSaveScene(
   }
 }
 
-export async function handleGetSceneTree(
-  ctx: ServerContext,
+/**
+ * Parse a .tscn file as text to extract the scene tree.
+ * This avoids launching Godot in headless mode, which fails when
+ * scripts reference autoload singletons.
+ */
+interface NodeInfo {
+  name: string;
+  type: string;
+  parent: string | null;
+  instance: string | null;
+  script: string | null;
+  properties: Record<string, string>;
+  children: NodeInfo[];
+}
+
+const typeRe = /type="([^"]+)"/;
+const pathRe = /path="([^"]+)"/;
+const idRe = / id="([^"]+)"/;
+const nameRe = /name="([^"]+)"/;
+const parentRe = /parent="([^"]+)"/;
+const instanceRe = /instance=ExtResource\("([^"]+)"\)/;
+const extRefRe = /ExtResource\("([^"]+)"\)/;
+
+function parseTscnSceneTree(filePath: string): Record<string, unknown> {
+  const content = readFileSync(filePath, "utf-8");
+  const lines = content.split("\n");
+
+  // 1. Parse ext_resources: map id -> { type, path }
+  const extResources: Record<string, { type: string; path: string }> = {};
+  for (const line of lines) {
+    if (line.startsWith("[ext_resource")) {
+      const typeMatch = typeRe.exec(line);
+      const pathMatch = pathRe.exec(line);
+      const idMatch = idRe.exec(line);
+      if (typeMatch?.[1] && pathMatch?.[1] && idMatch?.[1]) {
+        extResources[idMatch[1]] = {
+          type: typeMatch[1],
+          path: pathMatch[1],
+        };
+      }
+    }
+  }
+
+  // 2. Parse nodes: split file into node sections
+  const nodes: NodeInfo[] = [];
+  let currentNode: NodeInfo | null = null;
+
+  for (const line of lines) {
+    if (line.startsWith("[node ")) {
+      if (currentNode) nodes.push(currentNode);
+
+      const nameMatch = nameRe.exec(line);
+      const typeMatch = typeRe.exec(line);
+      const parentMatch = parentRe.exec(line);
+      const instanceMatch = instanceRe.exec(line);
+
+      const name = nameMatch?.[1] ?? "Unknown";
+      let type = typeMatch?.[1] ?? "";
+      let instancePath: string | null = null;
+
+      if (instanceMatch?.[1]) {
+        const res = extResources[instanceMatch[1]];
+        if (res?.type === "PackedScene") {
+          instancePath = res.path;
+          if (!type) type = `(instance of ${res.path})`;
+        }
+      }
+
+      currentNode = {
+        name,
+        type,
+        parent: parentMatch?.[1] ?? null,
+        instance: instancePath,
+        script: null,
+        properties: {},
+        children: [],
+      };
+    } else if (
+      currentNode &&
+      !line.startsWith("[") &&
+      line.includes("=") &&
+      line.trim() !== ""
+    ) {
+      const eqIdx = line.indexOf("=");
+      const key = line.substring(0, eqIdx).trim();
+      const value = line.substring(eqIdx + 1).trim();
+
+      if (key === "script") {
+        const extMatch = extRefRe.exec(value);
+        if (extMatch?.[1]) {
+          const res = extResources[extMatch[1]];
+          if (res) currentNode.script = res.path;
+        }
+      } else if (key !== "tile_map_data") {
+        currentNode.properties[key] = value;
+      }
+    } else if (line.startsWith("[connection") || line.startsWith("[editable")) {
+      if (currentNode) {
+        nodes.push(currentNode);
+        currentNode = null;
+      }
+    }
+  }
+  if (currentNode) nodes.push(currentNode);
+
+  if (nodes.length === 0) return {};
+
+  // 3. Build tree from flat parent paths
+  const root = nodes[0]!;
+  const pathToNode: Record<string, NodeInfo> = {};
+  pathToNode["."] = root;
+
+  function buildOutput(node: NodeInfo): Record<string, unknown> {
+    const data: Record<string, unknown> = { name: node.name, type: node.type };
+    if (node.script) data.script = node.script;
+    if (node.instance) data.instance = node.instance;
+
+    const props: Record<string, string> = {};
+    if (node.properties.position) props.position = node.properties.position;
+    if (node.properties.scale) props.scale = node.properties.scale;
+    if (node.properties.rotation) props.rotation = node.properties.rotation;
+    if (node.properties.visible) props.visible = node.properties.visible;
+    if (node.properties.z_index) props.z_index = node.properties.z_index;
+    if (node.properties.layer) props.layer = node.properties.layer;
+    if (Object.keys(props).length > 0) data.properties = props;
+
+    if (node.children.length > 0) {
+      data.children = node.children.map(buildOutput);
+    }
+    return data;
+  }
+
+  for (let i = 1; i < nodes.length; i++) {
+    const node = nodes[i]!;
+    const parentPath = node.parent ?? ".";
+
+    const parentNode = pathToNode[parentPath];
+    if (parentNode) {
+      parentNode.children.push(node);
+      if (parentPath === ".") {
+        pathToNode[node.name] = node;
+      } else {
+        pathToNode[parentPath + "/" + node.name] = node;
+      }
+    }
+  }
+
+  return buildOutput(root);
+}
+
+export function handleGetSceneTree(
+  _ctx: ServerContext,
   args: any,
-): Promise<ToolResponse> {
+): ToolResponse {
   args = normalizeParameters(args);
 
   if (!args.projectPath || !args.scenePath) {
@@ -217,25 +367,13 @@ export async function handleGetSceneTree(
       );
     }
 
-    const params = { scenePath: args.scenePath };
-    const { stdout, stderr } = await executeOperation(
-      ctx,
-      "get_scene_tree",
-      params,
-      args.projectPath,
-    );
-
-    if (stderr.includes("Failed to")) {
-      return createErrorResponse(`Failed to get scene tree: ${stderr}`, [
-        "Check if the scene file is valid",
-      ]);
-    }
-
-    return { content: [{ type: "text", text: stdout }] };
+    const tree = parseTscnSceneTree(scenePath);
+    const output = JSON.stringify(tree, null, 2);
+    return { content: [{ type: "text", text: output }] };
   } catch (error: any) {
     return createErrorResponse(
       `Failed to get scene tree: ${error?.message ?? "Unknown error"}`,
-      ["Ensure Godot is installed correctly"],
+      ["Check if the scene file is valid"],
     );
   }
 }
