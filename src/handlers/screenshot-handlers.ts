@@ -316,9 +316,15 @@ export async function handleRunAndCapture(
   try {
     // Run the project (NOT headless -- needs rendering)
     const timeout = (Number(duration) + 15) * 1000; // duration + 15s buffer
+    const godotArgs = ["--path", args.projectPath];
+    // If a specific scene was requested, pass it to Godot so it runs
+    // that scene instead of the project's main_scene setting.
+    if (args.scene) {
+      godotArgs.push(args.scene);
+    }
     const { stdout, stderr } = await execFileAsync(
       godotPath,
-      ["--path", args.projectPath],
+      godotArgs,
       { timeout },
     );
 
