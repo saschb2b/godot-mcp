@@ -155,6 +155,27 @@ export function convertCamelToSnakeCase(
   return result;
 }
 
+/**
+ * Filter out harmless Godot exit-time warnings from stderr.
+ * Godot emits resource leak warnings and ObjectDB cleanup messages on exit
+ * that are not actual operation failures.
+ */
+export function filterGodotStderr(stderr: string): string {
+  return stderr
+    .split("\n")
+    .filter(
+      (line) =>
+        !line.includes("RIDs of type") &&
+        !line.includes("ObjectDB instances leaked") &&
+        !line.includes("resources still in use at exit") &&
+        !line.includes("_free_rids") &&
+        !line.includes("cleanup (core/object/object.cpp") &&
+        !line.includes("clear (core/io/resource.cpp"),
+    )
+    .join("\n")
+    .trim();
+}
+
 export function isGodot44OrLater(version: string): boolean {
   const match = /^(\d+)\.(\d+)/.exec(version);
   if (match?.[1] && match[2]) {

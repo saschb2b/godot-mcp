@@ -4,6 +4,7 @@ import {
   normalizeParameters,
   validatePath,
   createErrorResponse,
+  filterGodotStderr,
 } from "../utils.js";
 import { executeOperation } from "../godot-executor.js";
 import { join } from "path";
@@ -63,7 +64,11 @@ export async function handleGetSceneInsights(
       args.projectPath,
     );
 
-    if (stderr.includes("Failed to") || stderr.includes("ERROR")) {
+    const filteredStderr = filterGodotStderr(stderr);
+    if (
+      filteredStderr.includes("Failed to") ||
+      filteredStderr.includes("ERROR")
+    ) {
       return createErrorResponse(`Failed to analyze scene: ${stderr}`, [
         "Ensure the scene path is correct",
         "Verify the scene file is valid",
@@ -125,7 +130,11 @@ export async function handleGetNodeInsights(
       args.projectPath,
     );
 
-    if (stderr.includes("Failed to") || stderr.includes("ERROR")) {
+    const filteredStderr = filterGodotStderr(stderr);
+    if (
+      filteredStderr.includes("Failed to") ||
+      filteredStderr.includes("ERROR")
+    ) {
       return createErrorResponse(`Failed to analyze script: ${stderr}`, [
         "Ensure the script path is correct",
         "Verify the script file is valid GDScript",

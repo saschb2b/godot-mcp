@@ -4,58 +4,73 @@ extends SceneTree
 # Debug mode flag
 var debug_mode = false
 
+# Stored from _init(), executed in _process() so autoloads are available
+var _pending_operation: String = ""
+var _pending_params: Dictionary = {}
+var _has_executed := false
+
 func _init():
     var args = OS.get_cmdline_args()
-    
+
     # Check for debug flag
     debug_mode = "--debug-godot" in args
-    
+
     # Find the script argument and determine the positions of operation and params
     var script_index = args.find("--script")
     if script_index == -1:
         log_error("Could not find --script argument")
         quit(1)
-    
+
     # The operation should be 2 positions after the script path (script_index + 1 is the script path itself)
     var operation_index = script_index + 2
     # The params should be 3 positions after the script path
     var params_index = script_index + 3
-    
+
     if args.size() <= params_index:
         log_error("Usage: godot --headless --script godot_operations.gd <operation> <json_params>")
         log_error("Not enough command-line arguments provided.")
         quit(1)
-    
+
     # Log all arguments for debugging
     log_debug("All arguments: " + str(args))
     log_debug("Script index: " + str(script_index))
     log_debug("Operation index: " + str(operation_index))
     log_debug("Params index: " + str(params_index))
-    
-    var operation = args[operation_index]
+
+    _pending_operation = args[operation_index]
     var params_json = args[params_index]
-    
-    log_info("Operation: " + operation)
+
+    log_info("Operation: " + _pending_operation)
     log_debug("Params JSON: " + params_json)
-    
+
     # Parse JSON using Godot 4.x API
     var json = JSON.new()
     var error = json.parse(params_json)
-    var params = null
-    
+
     if error == OK:
-        params = json.get_data()
+        _pending_params = json.get_data()
     else:
         log_error("Failed to parse JSON parameters: " + params_json)
         log_error("JSON Error: " + json.get_error_message() + " at line " + str(json.get_error_line()))
         quit(1)
-    
-    if not params:
+
+    if not _pending_params:
         log_error("Failed to parse JSON parameters: " + params_json)
         quit(1)
-    
+
+# Deferred to _process so autoload singletons are registered by the SceneTree.
+# In _init(), the SceneTree hasn't finished initialization, so load() on scenes
+# with scripts referencing autoloads (e.g. GameState.score) would fail.
+func _process(_delta):
+    if _has_executed:
+        return
+    _has_executed = true
+
+    var operation = _pending_operation
+    var params = _pending_params
+
     log_info("Executing operation: " + operation)
-    
+
     match operation:
         "create_scene":
             create_scene(params)
