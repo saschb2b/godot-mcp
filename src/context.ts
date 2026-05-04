@@ -1,5 +1,6 @@
 import type {
   GodotProcess,
+  ExitedProcessSnapshot,
   TcpState,
   InteractiveState,
   GodotServerConfig,
@@ -18,6 +19,13 @@ export class ServerContext {
   readOnly = false;
 
   activeProcess: GodotProcess | null = null;
+  /**
+   * Snapshot of the most recently exited process, populated by
+   * `snapshotExitedProcess()` from the child_process exit/error handlers.
+   * Lets `get_debug_output` still return stdout/stderr after the process is
+   * gone (e.g. when Godot crashes during startup before we can poll it).
+   */
+  lastExitedProcess: ExitedProcessSnapshot | null = null;
 
   tcp: TcpState = {
     socket: null,

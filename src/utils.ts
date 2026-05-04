@@ -2,6 +2,7 @@ import { join, basename } from "path";
 import { existsSync, readdirSync } from "fs";
 import type { ChildProcess } from "child_process";
 import type { OperationParams, ToolResponse } from "./types.js";
+import type { ServerContext } from "./context.js";
 
 export const PARAMETER_MAPPINGS: Record<string, string> = {
   project_path: "projectPath",
@@ -38,6 +39,32 @@ export function logDebug(debugMode: boolean, message: string): void {
   if (debugMode) {
     console.error(`[DEBUG] ${message}`);
   }
+}
+
+/**
+ * Move the active process's captured output/errors into `ctx.lastExitedProcess`
+ * and clear `ctx.activeProcess`. Called from the child_process `exit` and
+ * `error` event handlers so debug output is still queryable after the
+ * process has terminated.
+ *
+ * No-op if `ctx.activeProcess` doesn't reference the given process — this
+ * guards against stale handlers from a previous run firing late.
+ */
+export function snapshotExitedProcess(
+  ctx: ServerContext,
+  proc: ChildProcess,
+  exitCode: number | null,
+  reason: "exit" | "error" = "exit",
+): void {
+  if (ctx.activeProcess?.process !== proc) return;
+  ctx.lastExitedProcess = {
+    output: ctx.activeProcess.output,
+    errors: ctx.activeProcess.errors,
+    exitCode,
+    exitedAt: Date.now(),
+    reason,
+  };
+  ctx.activeProcess = null;
 }
 
 /** Kill a child process and wait for it to exit (with a timeout fallback). */
