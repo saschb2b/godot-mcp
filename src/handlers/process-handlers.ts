@@ -6,6 +6,7 @@ import {
   createErrorResponse,
   logDebug,
   killProcess,
+  snapshotExitedProcess,
 } from "../utils.js";
 import { ensureGodotPath } from "../godot-path.js";
 import { cleanupInteractive, disconnectTcp } from "../tcp-client.js";
@@ -133,6 +134,10 @@ export async function handleRunProject(
       ctx.activeProcess = null;
     }
 
+    // Drop any leftover snapshot from a previous run — once a new process
+    // starts, the old run's output is no longer the "most recent" data.
+    ctx.lastExitedProcess = null;
+
     const cmdArgs = ["-d", "--path", args.projectPath];
     if (args.scene && validatePath(args.scene)) {
       logDebug(ctx.debugMode, `Adding scene parameter: ${args.scene}`);
@@ -162,16 +167,14 @@ export async function handleRunProject(
 
     process.on("exit", (code: number | null) => {
       logDebug(ctx.debugMode, `Godot process exited with code ${code}`);
-      if (ctx.activeProcess?.process === process) {
-        ctx.activeProcess = null;
-      }
+      // Snapshot the captured output so get_debug_output keeps working
+      // after the process is gone — vital for diagnosing fast crashes.
+      snapshotExitedProcess(ctx, process, code, "exit");
     });
 
     process.on("error", (err: Error) => {
       console.error("Failed to start Godot process:", err);
-      if (ctx.activeProcess?.process === process) {
-        ctx.activeProcess = null;
-      }
+      snapshotExitedProcess(ctx, process, null, "error");
     });
 
     ctx.activeProcess = { process, output, errors };
@@ -239,18 +242,31 @@ export function handleGetDebugOutput(
   ctx: ServerContext,
   args: any,
 ): ToolResponse {
-  if (!ctx.activeProcess) {
-    return createErrorResponse("No active Godot process.", [
+  // Prefer the live process. If it's gone, fall back to the snapshot of
+  // the most recently exited process — that's the whole point of this
+  // tool when the user is debugging an early crash.
+  const isLive = ctx.activeProcess !== null;
+  const source =
+    ctx.activeProcess ??
+    (ctx.lastExitedProcess
+      ? {
+          output: ctx.lastExitedProcess.output,
+          errors: ctx.lastExitedProcess.errors,
+        }
+      : null);
+
+  if (!source) {
+    return createErrorResponse("No active or recently exited Godot process.", [
       "Use run_project to start a Godot project first",
-      "Check if the Godot process crashed unexpectedly",
+      "Output is retained briefly after the process exits — if you see this, no run has happened yet this session",
     ]);
   }
 
   const errorsOnly = args?.errorsOnly === true;
   const tail = typeof args?.tail === "number" ? args.tail : 0;
 
-  let output = ctx.activeProcess.output;
-  let errors = ctx.activeProcess.errors;
+  let output = source.output;
+  let errors = source.errors;
 
   if (errorsOnly) {
     // Filter output to only lines containing error/warning indicators
@@ -266,18 +282,21 @@ export function handleGetDebugOutput(
     errors = errors.slice(-tail);
   }
 
+  // When falling back to the snapshot, surface the exit metadata so the
+  // caller can tell at a glance the process is no longer running.
+  const payload: Record<string, unknown> = { output, errors };
+  if (!isLive && ctx.lastExitedProcess) {
+    payload.exited = true;
+    payload.exitCode = ctx.lastExitedProcess.exitCode;
+    payload.exitReason = ctx.lastExitedProcess.reason;
+    payload.exitedAt = ctx.lastExitedProcess.exitedAt;
+  }
+
   return {
     content: [
       {
         type: "text",
-        text: JSON.stringify(
-          {
-            output,
-            errors,
-          },
-          null,
-          2,
-        ),
+        text: JSON.stringify(payload, null, 2),
       },
     ],
   };

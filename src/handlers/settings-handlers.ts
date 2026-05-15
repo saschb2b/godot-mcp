@@ -4,6 +4,7 @@ import {
   normalizeParameters,
   validatePath,
   createErrorResponse,
+  filterGodotStderr,
 } from "../utils.js";
 import { executeOperation } from "../godot-executor.js";
 import { ensureGodotPath } from "../godot-path.js";
@@ -209,7 +210,7 @@ export async function handleExportProject(
 
     const { stdout, stderr } = await execFileAsync(godotPath, godotArgs);
 
-    if (stderr.includes("ERROR")) {
+    if (filterGodotStderr(stderr).includes("ERROR")) {
       return createErrorResponse(`Export failed: ${stderr}`, [
         "Check if the preset name matches one in export_presets.cfg",
       ]);

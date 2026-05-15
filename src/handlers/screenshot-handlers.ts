@@ -322,11 +322,9 @@ export async function handleRunAndCapture(
     if (args.scene) {
       godotArgs.push(args.scene);
     }
-    const { stdout, stderr } = await execFileAsync(
-      godotPath,
-      godotArgs,
-      { timeout },
-    );
+    const { stdout, stderr } = await execFileAsync(godotPath, godotArgs, {
+      timeout,
+    });
 
     // Check for capture success
     if (stdout.includes("[INFO] Screenshot saved:")) {

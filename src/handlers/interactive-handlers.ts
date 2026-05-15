@@ -5,6 +5,7 @@ import {
   validatePath,
   createErrorResponse,
   killProcess,
+  snapshotExitedProcess,
 } from "../utils.js";
 import { ensureGodotPath } from "../godot-path.js";
 import {
@@ -89,6 +90,9 @@ export async function handleRunInteractive(
     ctx.activeProcess = null;
   }
 
+  // Drop any leftover snapshot from a previous run.
+  ctx.lastExitedProcess = null;
+
   const godotPath = await ensureGodotPath(ctx);
   if (!godotPath) {
     return createErrorResponse("Could not find a valid Godot executable path", [
@@ -117,18 +121,18 @@ export async function handleRunInteractive(
     errors.push(...lines);
   });
 
-  proc.on("exit", () => {
+  proc.on("exit", (code) => {
     cleanupInteractive(ctx);
-    if (ctx.activeProcess?.process === proc) {
-      ctx.activeProcess = null;
-    }
+    // Snapshot before clearing activeProcess so get_debug_output can still
+    // report what the game printed before it died — especially important
+    // for interactive runs where a TCP connection failure looks identical
+    // to a crash from the outside.
+    snapshotExitedProcess(ctx, proc, code, "exit");
   });
 
   proc.on("error", () => {
     cleanupInteractive(ctx);
-    if (ctx.activeProcess?.process === proc) {
-      ctx.activeProcess = null;
-    }
+    snapshotExitedProcess(ctx, proc, null, "error");
   });
 
   ctx.activeProcess = { process: proc, output, errors };
@@ -534,10 +538,19 @@ export async function handleGetRuntimeErrors(
     };
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Unknown error";
-    return createErrorResponse(msg, [
+    // If the TCP receiver is gone but we did capture output before the
+    // process died, point the caller at get_debug_output rather than
+    // leaving them stranded with a bare connection error.
+    const solutions: string[] = [
       "Ensure the game is running via run_interactive",
-      "This tool requires Godot 4.5+ (Logger API)",
-    ]);
+    ];
+    if (ctx.lastExitedProcess) {
+      solutions.push(
+        "The game appears to have exited — call get_debug_output for captured stdout/stderr from the run",
+      );
+    }
+    solutions.push("This tool requires Godot 4.5+ (Logger API)");
+    return createErrorResponse(msg, solutions);
   }
 }
 
